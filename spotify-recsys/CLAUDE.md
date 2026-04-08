@@ -1,94 +1,42 @@
-# Spotify Mood RecSys — Project Context for Claude Code
+# CLAUDE.md
 
-## Who I Am
+## Project Goals
 
-- Name: Nathan Nguyen
-- Student: Data Science major at UC San Diego, GPA 3.9, graduating June 2027
-- Current: NREIP data engineering internship (SQL pipelines, Azure SQL)
-- Goal: ML Engineer role at a FAANG or FAANG-adjacent company in social/consumer tech
-- Experience: Python, Flask, FastAPI, SQL, PostgreSQL, Google Cloud Run, Firestore, scikit-learn, pandas, numpy
-- Gaps I'm closing with this project: Docker, CI/CD, production APIs, ANN indexing, A/B testing infrastructure
+A production-grade music recommendation API that accepts a seed track or natural language mood description and returns 10 personalized song recommendations with explanations. Includes an A/B testing framework comparing two ranking strategies.
 
----
-
-## What This Project Is
-
-A production-grade music recommendation API with three things that make it unique:
-
-1. **Natural language mood input** — user types "late night drive feeling nostalgic", Claude translates it into audio feature targets, system returns matching songs
-2. **Explainability** — every recommendation includes a plain English explanation of why it fits the mood
-3. **A/B testing framework** — two ranking strategies run in parallel, every request is logged, live metrics compare which strategy performs better
-
-This is not a tutorial project. It is built to demonstrate ML engineering skills to interviewers — production API patterns, experiment infrastructure, LLM integration, Docker, CI/CD, deployment.
+**Primary audience:** FAANG recruiters and ML engineering hiring managers  
+**Definition of done:** Live deployed URL on Render  
+**Current milestone:** MVP — seed track recommendation and mood-based recommendation working end to end
 
 ---
 
-## Career Context
+## Architecture Overview
 
-**Target role:** ML Engineer — Social/Consumer Tech  
-**Target companies:** Meta, Google, TikTok, Snap, FAANG-adjacent  
-**Why this project:** Feed ranking and recommendation systems are the core ML problem at every consumer tech company. This project demonstrates I understand the retrieval → ranking pipeline, can build production systems, and think about infrastructure not just models.
-
----
-
-## Tech Stack
-
-| Layer | Tool | Purpose |
-|---|---|---|
-| Frontend | Streamlit | Demo UI for interviews |
-| API framework | FastAPI | Main API layer |
-| Validation | Pydantic | Request/response schemas |
-| Rate limiting | slowapi | Max 10 req/min per IP |
-| Auth | Custom middleware | API key validation |
-| ML — similarity | Annoy | ANN index for fast track retrieval |
-| ML — ranking | scikit-learn | Strategy A and B rankers |
-| LLM | Anthropic SDK (claude-sonnet-4-20250514) | Mood translation + explanations |
-| Feature processing | numpy, pandas | Audio feature vectors |
-| Database | PostgreSQL 15 | Main data store |
-| ORM | SQLAlchemy | Database models and queries |
-| Migrations | Alembic | Schema version control |
-| Spotify client | spotipy | Spotify API wrapper |
-| Containerization | Docker + docker-compose | Run everything with one command |
-| Testing | pytest + httpx | API and unit tests |
-| CI/CD | GitHub Actions | Run tests on every push |
-| Deployment | Render | Free cloud hosting |
-
----
-
-## Project File Structure
+FastAPI backend + PostgreSQL database running in Docker. Annoy index for fast similarity search. Claude API for mood translation and explanation generation. Streamlit frontend for demo.
 
 ```
 spotify-recsys/
 ├── app/
-│   ├── main.py              # FastAPI app, all route definitions
-│   ├── models.py            # SQLAlchemy database models (tables)
-│   ├── schemas.py           # Pydantic request/response shapes
-│   ├── database.py          # DB engine, session factory, Base, get_db
-│   ├── auth.py              # API key validation middleware
-│   ├── limiter.py           # Rate limiting setup
-│   ├── recommender.py       # Core recommendation logic (retrieval)
-│   ├── ranker.py            # Strategy A and B ranking models
-│   ├── experiment.py        # A/B assignment and metrics calculation
-│   ├── mood.py              # Claude mood → audio feature targets
-│   └── explainer.py         # Claude explanation generation per track
+│   ├── main.py              # FastAPI app, all routes
+│   ├── models.py            # SQLAlchemy table definitions
+│   ├── schemas.py           # Pydantic request/response models
+│   ├── database.py          # Engine, SessionLocal, Base, get_db
+│   ├── auth.py              # API key validation
+│   ├── limiter.py           # Rate limiting
+│   ├── recommender.py       # Retrieval logic (Annoy index)
+│   ├── ranker.py            # Strategy A and B ranking
+│   ├── experiment.py        # A/B assignment and metrics
+│   ├── mood.py              # Claude mood → audio features
+│   └── explainer.py        # Claude explanation generation
 ├── scripts/
-│   ├── seed_catalog.py      # Pull tracks from Spotify API, populate DB
-│   └── build_index.py       # Build and save Annoy index from DB
-├── models/
-│   ├── annoy_index.ann      # Saved Annoy index (generated, not committed)
-│   └── ranker_b.pkl         # Saved Strategy B sklearn model (generated)
+│   ├── seed_catalog.py      # Populate tracks table from Spotify API
+│   └── build_index.py       # Build and save Annoy index
+├── models/                  # Saved Annoy index and ranker B model
 ├── frontend/
-│   └── app.py               # Streamlit demo app
+│   └── app.py               # Streamlit demo
 ├── tests/
-│   ├── test_recommend.py    # Tests for recommendation endpoints
-│   ├── test_experiment.py   # Tests for A/B assignment and metrics
-│   ├── test_mood.py         # Tests for mood translation endpoint
-│   └── test_health.py       # Health check tests
-├── .github/
-│   └── workflows/
-│       └── ci.yml           # GitHub Actions CI pipeline
-├── .env                     # Secrets — never commit this
-├── .gitignore
+├── .github/workflows/ci.yml
+├── .env                     # Never commit
 ├── Dockerfile
 ├── docker-compose.yml
 └── requirements.txt
@@ -96,296 +44,130 @@ spotify-recsys/
 
 ---
 
-## Database Schema
+## Tech Stack
 
-### tracks table
-Stores every song in the catalog with Spotify audio features.
-
-```python
-id              Integer, primary key, auto-increment
-spotify_id      String, unique, indexed, not null
-name            String, not null
-artist          String, not null
-album           String
-energy          Float        # 0.0–1.0, intensity and activity
-valence         Float        # 0.0–1.0, musical positivity
-danceability    Float        # 0.0–1.0, how suitable for dancing
-tempo           Float        # BPM
-acousticness    Float        # 0.0–1.0, acoustic vs electric
-instrumentalness Float       # 0.0–1.0, predicts no vocals
-loudness        Float        # dB, typically -60 to 0
-speechiness     Float        # 0.0–1.0, spoken word presence
-created_at      DateTime, server default now()
-```
-
-### recommendation_logs table
-Logs every request for monitoring and A/B experiment data.
-
-```python
-id              Integer, primary key, auto-increment
-request_type    String       # "track" or "mood"
-input_data      String       # what the user sent
-experiment_group String      # "A" or "B"
-strategy_used   String       # "cosine_similarity" or "mood_weighted"
-recommendations String       # JSON array of returned spotify_ids
-created_at      DateTime, server default now()
-```
-
-### feedback table
-Thumbs up/down tied to specific recommendation logs.
-
-```python
-id              Integer, primary key, auto-increment
-log_id          Integer, foreign key → recommendation_logs.id
-spotify_id      String       # which track was rated
-rating          Integer      # 1 = thumbs up, -1 = thumbs down
-created_at      DateTime, server default now()
-```
-
-### api_keys table
-Stores valid API keys and their experiment group assignment.
-
-```python
-id              Integer, primary key, auto-increment
-key             String, unique, indexed
-experiment_group String      # "A" or "B", assigned at key creation
-created_at      DateTime, server default now()
-```
+| Layer | Tool |
+|---|---|
+| API | FastAPI + Uvicorn |
+| Validation | Pydantic v2 |
+| ORM | SQLAlchemy 2.0 |
+| Migrations | Alembic |
+| Database | PostgreSQL 15 (Docker) |
+| Similarity search | Annoy |
+| Ranking | numpy (Strategy A), LightGBM (Strategy B) |
+| LLM | Anthropic SDK — claude-sonnet-4-20250514 |
+| Spotify client | spotipy |
+| Rate limiting | slowapi |
+| Testing | pytest + httpx |
+| CI | GitHub Actions |
+| Frontend | Streamlit |
+| Deployment | Render |
 
 ---
 
-## API Endpoints
+## Design & Code Style
 
-```
-GET  /health                     → system health check, no auth required
-POST /recommend/track            → seed track in, top 10 similar tracks out
-POST /recommend/mood             → natural language mood → top 10 tracks with explanations
-GET  /recommend/explain/{id}     → explanation for a specific recommendation log
-POST /feedback                   → thumbs up/down on a specific track recommendation
-GET  /experiments/results        → live A/B metrics comparing Strategy A vs B
-GET  /catalog/stats              → total tracks, audio feature distributions
-GET  /track/{spotify_id}         → details on a specific track
-```
+**Code quality is the top priority.**
 
-All write endpoints require `X-API-Key` header. Rate limited to 10 requests per minute per IP.
+- Every function has type hints on all parameters and return values
+- Every module has a one-line docstring describing its purpose
+- No function longer than 40 lines — split if needed
+- No raw SQL — SQLAlchemy ORM only
+- No hardcoded secrets — all from environment variables via `python-dotenv`
+- All API errors return consistent JSON: `{"error": "message", "code": 422}`
+- No commented-out code committed to main
 
----
-
-## How the Recommendation Pipeline Works
-
-### Offline (run once to set up)
-1. `scripts/seed_catalog.py` — calls Spotify API, pulls 2,000–5,000 tracks across genres and moods, stores audio features in `tracks` table
-2. `scripts/build_index.py` — loads all audio feature vectors from DB, builds Annoy index, saves to `models/annoy_index.ann`
-3. Train Strategy B model — fit a weighted ranking model on audio features, save to `models/ranker_b.pkl`
-
-### Online (every user request)
-1. Request arrives at FastAPI → rate limiter checks → auth validates API key
-2. If mood endpoint: send mood text to Claude → get back structured audio feature targets as JSON
-3. Convert input to query vector (8 audio features)
-4. Search Annoy index → retrieve top 500 candidate tracks
-5. Hash API key → assign user to Group A or Group B deterministically
-6. Group A: rank 500 candidates by cosine similarity (Strategy A)
-7. Group B: rank 500 candidates using mood-weighted sklearn model (Strategy B)
-8. Top 10 tracks selected
-9. For each track: call Claude to generate one-sentence explanation
-10. Log full request to `recommendation_logs` table
-11. Return top 10 tracks with explanations and experiment group metadata
+**API patterns:**
+- Auth header: `X-API-Key`
+- Rate limit: 10 requests per minute per IP
+- Errors: 401 missing key, 404 not found, 422 validation, 429 rate limit, 503 DB down
 
 ---
 
-## The A/B Testing Framework
+## Constraints & Policies
 
-### Assignment
-```python
-import hashlib
-group = "A" if int(hashlib.md5(api_key.encode()).hexdigest(), 16) % 2 == 0 else "B"
-```
-Same API key always gets same group. Deterministic, no randomness at request time.
+**Security — MUST follow:**
+- NEVER expose API keys to the client — server-side only
+- ALWAYS use environment variables for secrets
+- NEVER commit `.env` to git
+- Validate and sanitize all user input before passing to Claude
 
-### Strategy A — Cosine similarity
-Rank candidates by vector distance to query. Pure math, no model. Baseline.
-
-### Strategy B — Mood-weighted ranking
-sklearn model (start with GradientBoostingRegressor or LinearRegression) that weights audio features differently based on mood context. Trained on labeled mood-feature pairs.
-
-### Metrics endpoint response shape
-```json
-{
-  "strategy_a": {
-    "total_requests": 142,
-    "positive_feedback": 89,
-    "negative_feedback": 23,
-    "feedback_rate": 0.79
-  },
-  "strategy_b": {
-    "total_requests": 138,
-    "positive_feedback": 98,
-    "negative_feedback": 19,
-    "feedback_rate": 0.84
-  },
-  "winner": "strategy_b",
-  "statistical_significance": false
-}
-```
+**Dependencies:**
+- Do not add libraries not already in `requirements.txt` without asking
+- Use SQLAlchemy ORM — never raw SQL strings
+- Mock all Anthropic and Spotify API calls in tests — no real API calls in CI
 
 ---
 
-## Claude API Usage
+## Repository Etiquette
 
-Model: `claude-sonnet-4-20250514`  
-Two uses:
+**Branching:**
+- Always create a feature branch before starting major changes
+- Never commit directly to `main`
+- Branch naming: `feature/description` or `fix/description`
 
-### 1. Mood → audio feature targets (mood.py)
-Send the user's natural language mood, get back structured JSON with target audio feature values.
+**Git workflow:**
+1. `git checkout -b feature/your-feature-name`
+2. Develop and commit on the feature branch
+3. Test locally before pushing — `docker compose up` must work cleanly
+4. `git push -u origin feature/your-feature-name`
+5. Create a PR to merge into `main`
 
-Expected response shape:
-```json
-{
-  "energy": 0.35,
-  "valence": 0.25,
-  "danceability": 0.40,
-  "tempo": 85.0,
-  "acousticness": 0.60,
-  "instrumentalness": 0.20,
-  "loudness": -12.0,
-  "speechiness": 0.05
-}
-```
-
-Always prompt Claude to respond with JSON only, no preamble. Parse with try/except — if Claude returns invalid JSON, fall back to neutral feature values.
-
-### 2. Explanation generation (explainer.py)
-For each recommended track, send mood description + track audio features, get back one sentence explaining why the track fits.
-
-Keep explanations under 30 words. Batch all 10 tracks in one API call using a list in the prompt — don't make 10 separate calls.
+**Commits:**
+- Write clear commit messages describing the change
+- Keep commits focused on a single change
+- Never force push to `main`
 
 ---
 
-## Environment Variables (.env)
+## Local Dev Commands
 
-```
-SPOTIFY_CLIENT_ID=your_client_id
-SPOTIFY_CLIENT_SECRET=your_client_secret
-ANTHROPIC_API_KEY=your_key
-DATABASE_URL=postgresql://postgres:password@db:5432/recsys
-API_KEY=supersecretkey123
-```
-
-Note: `DATABASE_URL` uses `@db` as host when running inside Docker. Use `@localhost` when running outside Docker for local testing.
-
----
-
-## Docker Setup
-
-### docker-compose.yml services
-- `db` — PostgreSQL 15, port 5432, volume for data persistence
-- `app` — FastAPI app, port 8000, depends on db, mounts project directory
-
-### Key commands
 ```bash
-docker compose up db          # start database only
-docker compose up             # start everything
-docker compose up --build     # rebuild image and start
-docker compose logs app       # see app logs
-docker compose down           # stop everything
+# Start database only
+docker compose up db
+
+# Start full stack
+docker compose up
+
+# Run alembic outside Docker (use localhost not db)
+DATABASE_URL=postgresql://postgres:password@localhost:5432/recsys alembic upgrade head
+
+# Run tests
+pytest tests/ -v
+
+# Activate venv
+source venv/bin/activate
 ```
 
-### Verify database is running
+**Important:** Homebrew PostgreSQL conflicts with Docker on port 5432. Stop it before working:
 ```bash
-docker ps                     # should show db container as "Up"
-docker compose logs db        # look for "ready to accept connections"
+brew services stop postgresql@15
 ```
-
----
-
-## Milestone Plan
-
-### MVP (build first — nothing else until this works)
-- database.py and models.py complete and verified
-- tracks and recommendation_logs tables created in PostgreSQL
-- seed_catalog.py pulls real tracks from Spotify API into DB
-- Annoy index built from catalog
-- POST /recommend/track works end to end
-- GET /health works
-- API key auth on protected endpoints
-- Entire app runs with docker compose up
-
-### v1
-- POST /recommend/mood with Claude mood translation
-- Explanation on every recommendation
-- Rate limiting
-- Request logging to DB
-- Proper error handling (400, 401, 404, 422, 429)
-- Strategy A cosine similarity ranker
-
-### v2
-- A/B testing framework complete
-- POST /feedback endpoint
-- GET /experiments/results with live metrics
-- Cold start handling
-- pytest suite (10+ tests)
-- GitHub Actions CI
-
-### Later
-- Streamlit frontend deployed
-- Render deployment (live public URL)
-- GET /catalog/stats
-- Mood history and drift detection
-
-### Not in scope
-- Real Spotify user OAuth
-- Streaming responses
-- Mobile app
-- Real-time model retraining
-- Payments
 
 ---
 
 ## Current Status
 
-Completed:
-- Spotify developer app created (Client ID and Secret obtained)
-- Project folder structure created
-- Docker Desktop installed and running
-- docker-compose.yml written and validated
-- Dockerfile written
-- requirements.txt written
-- .env file configured
-- PostgreSQL running in Docker (verified with docker compose up db)
-- app/database.py — engine and DATABASE_URL written, session factory and Base still needed
+**Completed:**
+- Project folder structure
+- Docker + PostgreSQL running
+- `app/database.py` — complete
+- `app/models.py` — complete (Track, RecommendationLog, Feedback, ApiKey)
+- Alembic initialized — first migration applied, all 4 tables verified in PostgreSQL
+- `docker-compose.yml`, `Dockerfile`, `requirements.txt` — complete
+- `.env` configured with all secrets
+- GitHub repo created
 
-In progress:
-- Completing app/database.py (need SessionLocal, Base, get_db)
-- app/models.py (not started)
+**In progress:**
+- `app/main.py` — not started
 
-Next step after database.py and models.py are complete:
-- Write app/main.py skeleton with Base.metadata.create_all()
-- Run app and verify both tables appear in PostgreSQL
-- Then move to scripts/seed_catalog.py
+**Next step:**
+Write `app/main.py` — minimal FastAPI app that starts up, calls `Base.metadata.create_all()`, and serves `GET /health`. Verify with `docker compose up app` then `curl http://localhost:8000/health`.
 
 ---
 
-## Key Concepts to Know
+## Documentation
 
-**Embeddings** — a list of numbers representing a song's audio characteristics. Spotify provides 8 audio features per track. These 8 numbers are the embedding. Similar songs have similar numbers.
-
-**ANN (Approximate Nearest Neighbor)** — fast similarity search. Instead of comparing a query vector against all 5,000 songs exactly, Annoy finds the ~500 closest songs approximately in milliseconds. Built by Spotify. Used via the `annoy` Python library.
-
-**Retrieval → Ranking** — two stage pipeline. Retrieval (fast, approximate): narrow 5,000 songs to 500 candidates using Annoy. Ranking (slower, precise): score those 500 carefully and pick top 10.
-
-**A/B testing** — run two strategies simultaneously on different users, measure which performs better via feedback. Assignment must be deterministic (same user always same group).
-
-**Cold start** — what happens when a new user has no history. Handle by falling back to mood-only recommendation without personalization.
-
----
-
-## Code Style Preferences
-
-- Keep files single-responsibility — one clear purpose per file
-- Use type hints on all function signatures
-- Pydantic models for all request and response shapes
-- SQLAlchemy ORM for all database operations — no raw SQL strings
-- Load all secrets from environment variables via python-dotenv — never hardcode
-- All API errors should return meaningful messages, never raw 500s
-- Write try/except around all Claude API calls with sensible fallbacks
-- Comment architectural decisions, not obvious code
+- [Overview](docs/overview.md) — full project context, career goals, background
+- [Project Spec](docs/PROJECT_SPEC.md) — detailed requirements, API contract, architecture decisions
+- Update files in docs folder after major milestones and major additions to the project
