@@ -15,7 +15,7 @@ A production-grade music recommendation API that accepts a seed track or natural
 FastAPI backend + PostgreSQL database running in Docker. Annoy index for fast similarity search. Claude API for mood translation and explanation generation. Streamlit frontend for demo.
 
 ```
-spotify-recsys/
+spotify-song-recommender/
 ├── app/
 │   ├── main.py              # FastAPI app, all routes
 │   ├── models.py            # SQLAlchemy table definitions

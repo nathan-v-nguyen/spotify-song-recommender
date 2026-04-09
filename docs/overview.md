@@ -58,7 +58,7 @@ This is not a tutorial project. It is built to demonstrate ML engineering skills
 ## Project File Structure
 
 ```
-spotify-recsys/
+spotify-song-recommender/
 ├── app/
 │   ├── main.py              # FastAPI app, all route definitions
 │   ├── models.py            # SQLAlchemy database models (tables)
