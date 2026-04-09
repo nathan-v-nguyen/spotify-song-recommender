@@ -355,16 +355,17 @@ Completed:
 - app/database.py — complete (engine, SessionLocal, Base, get_db)
 - app/models.py — complete (Track, RecommendationLog, Feedback, ApiKey)
 - Alembic initialized — first migration applied, all 4 tables verified in PostgreSQL
-- app/main.py — complete: FastAPI app with lifespan startup, GET /health with DB connectivity check
+- app/main.py — complete: FastAPI app with lifespan startup, GET /health with DB connectivity check, rate limiter wired in, catch-all 500 handler
+- app/limiter.py — complete: slowapi Limiter keyed by client IP, 10 req/min per route
+- app/auth.py — complete: require_api_key dependency validates X-API-Key header against api_keys table, returns ApiKey record for A/B group access
 
 In progress:
-- app/limiter.py — not started
-- app/auth.py — not started
+- scripts/seed_catalog.py — not started
 
 Next steps:
-- Write app/limiter.py — slowapi Limiter keyed by IP, wire into main.py
-- Write app/auth.py — X-API-Key validation dependency against api_keys table
-- Then move to scripts/seed_catalog.py
+- Write scripts/seed_catalog.py — pull 2,000–5,000 tracks from Spotify API, store audio features in tracks table
+- Write scripts/build_index.py — build and save Annoy index from catalog
+- Then write app/recommender.py and POST /recommend/track
 
 ---
 

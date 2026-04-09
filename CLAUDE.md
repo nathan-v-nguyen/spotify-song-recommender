@@ -157,14 +157,15 @@ brew services stop postgresql@15
 - `docker-compose.yml`, `Dockerfile`, `requirements.txt` — complete
 - `.env` configured with all secrets
 - GitHub repo created
-- `app/main.py` — complete: FastAPI app with lifespan startup (`Base.metadata.create_all`), `GET /health` with DB connectivity check
+- `app/main.py` — complete: FastAPI app with lifespan startup (`Base.metadata.create_all`), `GET /health` with DB connectivity check, rate limiter wired in, catch-all 500 handler
+- `app/limiter.py` — complete: slowapi Limiter keyed by client IP, 10 req/min per route
+- `app/auth.py` — complete: `require_api_key` dependency validates `X-API-Key` header against `api_keys` table, returns `ApiKey` record for A/B group access
 
 **In progress:**
-- `app/limiter.py` — not started
-- `app/auth.py` — not started
+- `scripts/seed_catalog.py` — not started
 
 **Next step:**
-Write `app/limiter.py` — create a `slowapi` Limiter instance keyed by client IP and wire it into `main.py` with the 429 exception handler. Then write `app/auth.py` — a `Depends`-injectable function that validates the `X-API-Key` header against the `api_keys` table.
+Write `scripts/seed_catalog.py` — pull 2,000–5,000 tracks from the Spotify API using spotipy, store audio features in the `tracks` table. Then write `scripts/build_index.py` to build and save the Annoy index from the catalog.
 
 ---
 
