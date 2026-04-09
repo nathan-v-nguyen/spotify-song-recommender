@@ -352,15 +352,18 @@ Completed:
 - requirements.txt written
 - .env file configured
 - PostgreSQL running in Docker (verified with docker compose up db)
-- app/database.py — engine and DATABASE_URL written, session factory and Base still needed
+- app/database.py — complete (engine, SessionLocal, Base, get_db)
+- app/models.py — complete (Track, RecommendationLog, Feedback, ApiKey)
+- Alembic initialized — first migration applied, all 4 tables verified in PostgreSQL
+- app/main.py — complete: FastAPI app with lifespan startup, GET /health with DB connectivity check
 
 In progress:
-- Completing app/database.py (need SessionLocal, Base, get_db)
-- app/models.py (not started)
+- app/limiter.py — not started
+- app/auth.py — not started
 
-Next step after database.py and models.py are complete:
-- Write app/main.py skeleton with Base.metadata.create_all()
-- Run app and verify both tables appear in PostgreSQL
+Next steps:
+- Write app/limiter.py — slowapi Limiter keyed by IP, wire into main.py
+- Write app/auth.py — X-API-Key validation dependency against api_keys table
 - Then move to scripts/seed_catalog.py
 
 ---

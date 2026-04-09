@@ -157,12 +157,14 @@ brew services stop postgresql@15
 - `docker-compose.yml`, `Dockerfile`, `requirements.txt` — complete
 - `.env` configured with all secrets
 - GitHub repo created
+- `app/main.py` — complete: FastAPI app with lifespan startup (`Base.metadata.create_all`), `GET /health` with DB connectivity check
 
 **In progress:**
-- `app/main.py` — not started
+- `app/limiter.py` — not started
+- `app/auth.py` — not started
 
 **Next step:**
-Write `app/main.py` — minimal FastAPI app that starts up, calls `Base.metadata.create_all()`, and serves `GET /health`. Verify with `docker compose up app` then `curl http://localhost:8000/health`.
+Write `app/limiter.py` — create a `slowapi` Limiter instance keyed by client IP and wire it into `main.py` with the 429 exception handler. Then write `app/auth.py` — a `Depends`-injectable function that validates the `X-API-Key` header against the `api_keys` table.
 
 ---
 
