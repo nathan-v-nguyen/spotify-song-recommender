@@ -33,7 +33,7 @@ try:
       loudness=row["loudness"],
       popularity= int(row["popularity"]),
       speechiness=row["speechiness"]
-    )
+      )
     db.add(track)
     count += 1
     if count % 100 == 0:
