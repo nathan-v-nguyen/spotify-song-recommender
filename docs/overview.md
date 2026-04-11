@@ -99,7 +99,7 @@ spotify-song-recommender/
 ## Database Schema
 
 ### tracks table
-Stores every song in the catalog with Spotify audio features.
+Stores every song in the catalog with audio features sourced from a Kaggle dataset (Spotify deprecated their audio features API in 2024).
 
 ```python
 id              Integer, primary key, auto-increment
@@ -115,6 +115,7 @@ acousticness    Float        # 0.0–1.0, acoustic vs electric
 instrumentalness Float       # 0.0–1.0, predicts no vocals
 loudness        Float        # dB, typically -60 to 0
 speechiness     Float        # 0.0–1.0, spoken word presence
+popularity      Integer      # 0–100, Spotify popularity score
 created_at      DateTime, server default now()
 ```
 
@@ -174,14 +175,14 @@ All write endpoints require `X-API-Key` header. Rate limited to 10 requests per 
 ## How the Recommendation Pipeline Works
 
 ### Offline (run once to set up)
-1. `scripts/seed_catalog.py` — calls Spotify API, pulls 2,000–5,000 tracks across genres and moods, stores audio features in `tracks` table
+1. `scripts/seed_catalog.py` — loads tracks from Kaggle CSV dataset (Spotify audio features API deprecated in 2024), stores audio features + popularity in `tracks` table
 2. `scripts/build_index.py` — loads all audio feature vectors from DB, builds Annoy index, saves to `models/annoy_index.ann`
 3. Train Strategy B model — fit a weighted ranking model on audio features, save to `models/ranker_b.pkl`
 
 ### Online (every user request)
 1. Request arrives at FastAPI → rate limiter checks → auth validates API key
 2. If mood endpoint: send mood text to Claude → get back structured audio feature targets as JSON
-3. Convert input to query vector (8 audio features)
+3. Convert input to query vector (9 audio features: 8 original + popularity)
 4. Search Annoy index → retrieve top 500 candidate tracks
 5. Hash API key → assign user to Group A or Group B deterministically
 6. Group A: rank 500 candidates by cosine similarity (Strategy A)
@@ -358,14 +359,16 @@ Completed:
 - app/main.py — complete: FastAPI app with lifespan startup, GET /health with DB connectivity check, rate limiter wired in, catch-all 500 handler
 - app/limiter.py — complete: slowapi Limiter keyed by client IP, 10 req/min per route
 - app/auth.py — complete: require_api_key dependency validates X-API-Key header against api_keys table, returns ApiKey record for A/B group access
+- scripts/seed_catalog.py — complete: loads tracks from Kaggle CSV (Spotify audio features API deprecated 2024), deduplicates on spotify_id, writes to tracks table with popularity as an additional feature
 
 In progress:
-- scripts/seed_catalog.py — not started
+- scripts/build_index.py — not started
 
 Next steps:
-- Write scripts/seed_catalog.py — pull 2,000–5,000 tracks from Spotify API, store audio features in tracks table
-- Write scripts/build_index.py — build and save Annoy index from catalog
-- Then write app/recommender.py and POST /recommend/track
+- Write scripts/build_index.py — normalize 9 features, build and save Annoy index + position → spotify_id mapping
+- Write app/recommender.py — load index, accept query vector, return top 500 candidates
+- Write app/ranker.py — cosine similarity Strategy A, return top 10
+- Wire into POST /recommend/track
 
 ---
 

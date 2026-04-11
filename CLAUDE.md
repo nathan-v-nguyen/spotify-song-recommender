@@ -161,11 +161,13 @@ brew services stop postgresql@15
 - `app/limiter.py` — complete: slowapi Limiter keyed by client IP, 10 req/min per route
 - `app/auth.py` — complete: `require_api_key` dependency validates `X-API-Key` header against `api_keys` table, returns `ApiKey` record for A/B group access
 
+- `scripts/seed_catalog.py` — complete: loads tracks from Kaggle CSV dataset (Spotify audio features API deprecated in 2024), deduplicates on `spotify_id`, writes to `tracks` table. Includes `popularity` as an additional feature.
+
 **In progress:**
-- `scripts/seed_catalog.py` — not started
+- `scripts/build_index.py` — not started
 
 **Next step:**
-Write `scripts/seed_catalog.py` — pull 2,000–5,000 tracks from the Spotify API using spotipy, store audio features in the `tracks` table. Then write `scripts/build_index.py` to build and save the Annoy index from the catalog.
+Write `scripts/build_index.py` — load tracks from DB, normalize the 9 audio features (8 original + popularity) per the feature vector spec, build and save the Annoy index to `models/annoy_index.ann` plus a position → spotify_id mapping file.
 
 ---
 

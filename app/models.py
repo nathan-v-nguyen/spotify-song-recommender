@@ -23,6 +23,7 @@ class Track(Base):
     instrumentalness = Column(Float)
     loudness = Column(Float)
     speechiness = Column(Float)
+    popularity = Column(Integer)
     created_at = Column(DateTime, server_default=func.now())
 
 
