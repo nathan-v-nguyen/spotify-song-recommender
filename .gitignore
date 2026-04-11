@@ -17,3 +17,6 @@ __pycache__/
 .idea/
 data/
 .cache
+
+# Generated model artifacts — rebuild with scripts/build_index.py
+models/
