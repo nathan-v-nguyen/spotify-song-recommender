@@ -359,16 +359,17 @@ Completed:
 - app/main.py — complete: FastAPI app with lifespan startup, GET /health with DB connectivity check, rate limiter wired in, catch-all 500 handler
 - app/limiter.py — complete: slowapi Limiter keyed by client IP, 10 req/min per route
 - app/auth.py — complete: require_api_key dependency validates X-API-Key header against api_keys table, returns ApiKey record for A/B group access
-- scripts/seed_catalog.py — complete: loads tracks from Kaggle CSV (Spotify audio features API deprecated 2024), deduplicates on spotify_id, writes to tracks table with popularity as an additional feature
+- scripts/seed_catalog.py — complete: loads tracks from Kaggle CSV (Spotify audio features API deprecated 2024), deduplicates on spotify_id, writes to tracks table with popularity as an additional feature. 89,740 tracks loaded.
+- scripts/build_index.py — complete: fits MinMaxScaler on 9-feature matrix (energy, valence, danceability, tempo, acousticness, instrumentalness, loudness, speechiness, popularity), builds Annoy index (50 trees, angular distance), saves 3 artifacts to models/: annoy_index.ann (60MB), track_id_map.json (2.2MB), scaler.pkl (1KB). Verified — nearest neighbor queries return valid spotify_ids.
 
 In progress:
-- scripts/build_index.py — not started
+- Nothing — all offline setup scripts complete
 
-Next steps:
-- Write scripts/build_index.py — normalize 9 features, build and save Annoy index + position → spotify_id mapping
-- Write app/recommender.py — load index, accept query vector, return top 500 candidates
-- Write app/ranker.py — cosine similarity Strategy A, return top 10
-- Wire into POST /recommend/track
+Next steps (MVP recommendation pipeline, in order):
+1. app/recommender.py — load Annoy index + scaler at startup, normalize query vectors with saved scaler, call get_nns_by_vector to return top 500 candidate spotify_ids
+2. app/ranker.py — Strategy A: fetch 500 candidates from DB, compute cosine similarity vs query vector, return top 10 Track objects
+3. app/schemas.py — Pydantic request/response models for POST /recommend/track
+4. Wire POST /recommend/track in app/main.py — seed track lookup → normalize → retrieve → rank → log → respond
 
 ---
 

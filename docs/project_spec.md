@@ -664,21 +664,33 @@ Seed genres: pop, rock, hip-hop, jazz, classical, electronic, r&b, country,
 
 Purpose: build and save the Annoy index from the current tracks table.
 
+**Status: Complete. Verified against 89,740 tracks.**
+
 ```
 Algorithm:
-1. Query all tracks from DB: SELECT spotify_id, energy, valence, danceability,
-   tempo, acousticness, instrumentalness, loudness, speechiness FROM tracks
-2. Normalize features:
-   - tempo: divide by 200.0 to bring into [0, 1] range
-   - loudness: (loudness + 60) / 60.0 to bring into [0, 1] range
-   - all other features already in [0, 1]
-3. Build in-memory mapping: {annoy_int_id → spotify_id}
-4. Initialize AnnoyIndex(f=8, metric='angular')
-5. For each track: index.add_item(annoy_id, feature_vector)
-6. index.build(n_trees=50)  -- 50 trees: good recall vs memory tradeoff at 5K tracks
-7. index.save('models/annoy_index.ann')
-8. Save id→spotify_id mapping as 'models/track_id_map.json'
-9. Log: total tracks indexed, index file size
+1. load_tracks(): query all tracks from DB, return parallel lists —
+   spotify_ids: list[str] and feature_rows: list[list[float]]
+   Feature order (9 features): energy, valence, danceability, tempo,
+   acousticness, instrumentalness, loudness, speechiness, popularity
+
+2. normalize_features(): fit sklearn MinMaxScaler on full (n_tracks, 9) matrix
+   - Scales every feature to [0, 1] using global min/max across catalog
+   - Saves fitted scaler to models/scaler.pkl via joblib.dump()
+   - IMPORTANT: same scaler must be applied to query vectors at request time
+
+3. build_index(): build Annoy index from normalized matrix
+   - Initialize AnnoyIndex(f=9, metric='angular')
+     ('angular' distance == cosine similarity)
+   - For each row i: index.add_item(i, normalized_vector)
+   - index.build(n_trees=50) — 50 trees balances recall vs memory at this scale
+   - index.save('models/annoy_index.ann')
+   - Save spotify_ids list as 'models/track_id_map.json'
+     (list index == Annoy position, enables O(1) lookup: track_ids[i])
+
+Output files (in models/):
+  annoy_index.ann     — 60MB, the Annoy index
+  track_id_map.json   — 2.2MB, ordered list of spotify_ids by Annoy position
+  scaler.pkl          — 1KB, fitted MinMaxScaler
 
 Note: must re-run whenever new tracks are added to the DB
 ```
