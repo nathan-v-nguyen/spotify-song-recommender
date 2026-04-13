@@ -362,14 +362,15 @@ Completed:
 - scripts/seed_catalog.py — complete: loads tracks from Kaggle CSV (Spotify audio features API deprecated 2024), deduplicates on spotify_id, writes to tracks table with popularity as an additional feature. 89,740 tracks loaded.
 - scripts/build_index.py — complete: fits MinMaxScaler on 9-feature matrix (energy, valence, danceability, tempo, acousticness, instrumentalness, loudness, speechiness, popularity), builds Annoy index (50 trees, angular distance), saves 3 artifacts to models/: annoy_index.ann (60MB), track_id_map.json (2.2MB), scaler.pkl (1KB). Verified — nearest neighbor queries return valid spotify_ids.
 
+- app/recommender.py — complete: loads Annoy index, MinMaxScaler, and track_id_map at module level. `track_to_vector(track)` extracts 9 raw features from a Track ORM object. `get_candidates(query_vector, n=500)` normalizes via saved scaler and returns nearest spotify_ids. Verified with smoke test.
+
 In progress:
-- Nothing — all offline setup scripts complete
+- Nothing
 
 Next steps (MVP recommendation pipeline, in order):
-1. app/recommender.py — load Annoy index + scaler at startup, normalize query vectors with saved scaler, call get_nns_by_vector to return top 500 candidate spotify_ids
-2. app/ranker.py — Strategy A: fetch 500 candidates from DB, compute cosine similarity vs query vector, return top 10 Track objects
-3. app/schemas.py — Pydantic request/response models for POST /recommend/track
-4. Wire POST /recommend/track in app/main.py — seed track lookup → normalize → retrieve → rank → log → respond
+1. app/ranker.py — Strategy A: fetch 500 candidate Track objects from DB, compute cosine similarity vs query vector using numpy, return top 10 Track objects
+2. app/schemas.py — Pydantic request/response models for POST /recommend/track
+3. Wire POST /recommend/track in app/main.py — seed track lookup → track_to_vector → get_candidates → rank_strategy_a → log to recommendation_logs → return top 10
 
 ---
 

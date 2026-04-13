@@ -164,14 +164,15 @@ brew services stop postgresql@15
 - `scripts/seed_catalog.py` — complete: loads tracks from Kaggle CSV dataset (Spotify audio features API deprecated in 2024), deduplicates on `spotify_id`, writes to `tracks` table. Includes `popularity` as an additional feature.
 - `scripts/build_index.py` — complete: loads 89,740 tracks from DB, normalizes 9 audio features with `MinMaxScaler` (saved to `models/scaler.pkl`), builds Annoy index with 50 trees using `angular` distance, saves index to `models/annoy_index.ann` and position → spotify_id list to `models/track_id_map.json`. Verified with sanity check — nearest neighbor queries return valid spotify_ids with expected low distances.
 
+- `app/recommender.py` — complete: loads Annoy index, scaler, and id map at module level (once at startup). Exposes `track_to_vector(track) -> list[float]` to extract features from a Track ORM object, and `get_candidates(query_vector, n=500) -> list[str]` to normalize a raw feature vector and return nearest spotify_ids. Verified with manual smoke test — returns valid candidates with seed track as its own nearest neighbor.
+
 **In progress:**
-- Nothing — all offline setup complete
+- Nothing
 
 **Next steps (MVP pipeline, in order):**
-1. Write `app/recommender.py` — load Annoy index + scaler at startup, expose `get_candidates(query_vector, n=500) -> list[str]` returning nearest spotify_ids
-2. Write `app/ranker.py` — Strategy A: fetch 500 candidate tracks from DB, compute cosine similarity against query vector, return top 10 `Track` objects
-3. Write `app/schemas.py` — Pydantic request/response models for `POST /recommend/track`
-4. Wire `POST /recommend/track` in `app/main.py` — look up seed track, normalize features, call retrieval → ranking, log to `recommendation_logs`, return top 10
+1. Write `app/ranker.py` — Strategy A: fetch 500 candidate tracks from DB, compute cosine similarity against query vector using numpy, sort descending, return top 10 `Track` objects
+2. Write `app/schemas.py` — Pydantic request/response models for `POST /recommend/track`
+3. Wire `POST /recommend/track` in `app/main.py` — look up seed track, call `track_to_vector` → `get_candidates` → `rank_strategy_a`, log to `recommendation_logs`, return top 10
 
 ---
 
