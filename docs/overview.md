@@ -363,14 +363,17 @@ Completed:
 - scripts/build_index.py — complete: fits MinMaxScaler on 9-feature matrix (energy, valence, danceability, tempo, acousticness, instrumentalness, loudness, speechiness, popularity), builds Annoy index (50 trees, angular distance), saves 3 artifacts to models/: annoy_index.ann (60MB), track_id_map.json (2.2MB), scaler.pkl (1KB). Verified — nearest neighbor queries return valid spotify_ids.
 
 - app/recommender.py — complete: loads Annoy index, MinMaxScaler, and track_id_map at module level. `track_to_vector(track)` extracts 9 raw features from a Track ORM object. `get_candidates(query_vector, n=500)` normalizes via saved scaler and returns nearest spotify_ids. Verified with smoke test.
+- app/ranker.py — complete: Strategy A cosine similarity ranker. `ranker_a(query_vector, candidate_ids, db, n=10)` fetches candidate Track objects from DB, scales raw feature vectors with saved MinMaxScaler, computes cosine similarity via numpy unit-vector dot product, returns top n `(Track, float)` tuples sorted by score descending.
+- app/schemas.py — complete: `TrackRecommendationRequest` (spotify_id, limit with ge=1/le=50 validation), `TrackRecommendation` (single track response with from_attributes=True for ORM compatibility), `RecommendationResponse` (full envelope with recommendations list, experiment_group, strategy, log_id).
 
 In progress:
 - Nothing
 
 Next steps (MVP recommendation pipeline, in order):
-1. app/ranker.py — Strategy A: fetch 500 candidate Track objects from DB, compute cosine similarity vs query vector using numpy, return top 10 Track objects
-2. app/schemas.py — Pydantic request/response models for POST /recommend/track
-3. Wire POST /recommend/track in app/main.py — seed track lookup → track_to_vector → get_candidates → rank_strategy_a → log to recommendation_logs → return top 10
+1. Wire POST /recommend/track in app/main.py — look up seed track by spotify_id (404 if not found), call track_to_vector → get_candidates → ranker_a, log to recommendation_logs, return RecommendationResponse
+2. app/mood.py — Claude mood → audio feature targets (POST /recommend/mood prerequisite)
+3. app/explainer.py — batch Claude explanation generation for top 10 tracks
+4. Wire POST /recommend/mood in app/main.py
 
 ---
 

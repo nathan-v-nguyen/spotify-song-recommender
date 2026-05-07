@@ -165,14 +165,17 @@ brew services stop postgresql@15
 - `scripts/build_index.py` — complete: loads 89,740 tracks from DB, normalizes 9 audio features with `MinMaxScaler` (saved to `models/scaler.pkl`), builds Annoy index with 50 trees using `angular` distance, saves index to `models/annoy_index.ann` and position → spotify_id list to `models/track_id_map.json`. Verified with sanity check — nearest neighbor queries return valid spotify_ids with expected low distances.
 
 - `app/recommender.py` — complete: loads Annoy index, scaler, and id map at module level (once at startup). Exposes `track_to_vector(track) -> list[float]` to extract features from a Track ORM object, and `get_candidates(query_vector, n=500) -> list[str]` to normalize a raw feature vector and return nearest spotify_ids. Verified with manual smoke test — returns valid candidates with seed track as its own nearest neighbor.
+- `app/ranker.py` — complete: Strategy A cosine similarity ranker. `ranker_a(query_vector, candidate_ids, db, n=10)` fetches candidate Track objects from DB, scales raw features with saved MinMaxScaler, computes cosine similarity via numpy unit-vector dot product, returns top n `(Track, float)` tuples sorted descending.
+- `app/schemas.py` — complete: `TrackRecommendationRequest` (spotify_id, limit with ge=1/le=50), `TrackRecommendation` (single track with from_attributes=True for ORM compatibility), `RecommendationResponse` (full envelope with recommendations list, experiment_group, strategy, log_id).
 
 **In progress:**
 - Nothing
 
 **Next steps (MVP pipeline, in order):**
-1. Write `app/ranker.py` — Strategy A: fetch 500 candidate tracks from DB, compute cosine similarity against query vector using numpy, sort descending, return top 10 `Track` objects
-2. Write `app/schemas.py` — Pydantic request/response models for `POST /recommend/track`
-3. Wire `POST /recommend/track` in `app/main.py` — look up seed track, call `track_to_vector` → `get_candidates` → `rank_strategy_a`, log to `recommendation_logs`, return top 10
+1. Wire `POST /recommend/track` in `app/main.py` — look up seed track by spotify_id (404 if not found), call `track_to_vector` → `get_candidates` → `ranker_a`, log to `recommendation_logs`, return `RecommendationResponse`
+2. `app/mood.py` — Claude mood → audio feature targets (`POST /recommend/mood` prerequisite)
+3. `app/explainer.py` — batch Claude explanation generation for top 10 tracks
+4. Wire `POST /recommend/mood` in `app/main.py`
 
 ---
 
