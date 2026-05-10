@@ -2,7 +2,7 @@
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Depends, Request
+from fastapi import FastAPI, Depends, Request, HTTPException
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -11,6 +11,12 @@ from sqlalchemy import text
 
 from app.database import Base, engine, get_db
 from app.limiter import limiter
+
+from app.models import Track, ApiKey
+from app.recommender import track_to_vector, get_candidates
+from app.ranker import ranker_a
+from app.schemas import TrackRecommendation, TrackRecommendationRequest, RecommendationResponse
+from app.auth import require_api_key
 
 
 @asynccontextmanager
@@ -40,4 +46,43 @@ def health(request: Request, db: Session = Depends(get_db)) -> dict:
         return {"status": "ok", "db": "connected"}
     except Exception:
         return {"status": "degraded", "db": "unreachable"}
+
+
+@app.post("/recommend/track")
+@limiter.limit("10/minute")
+def recommend_track(
+    body: TrackRecommendationRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    api_key: ApiKey = Depends(require_api_key)
+) -> RecommendationResponse:
+    track = db.query(Track).filter(Track.spotify_id == body.spotify_id).first()
+
+    if not track:
+        raise HTTPException(status_code=404, detail= {"error": "Track not found in catalog", "code": 404})
+    
+    query_vector = track_to_vector(track)
+    candidates = get_candidates(query_vector)
+    ranked_candidates = ranker_a(query_vector, candidates, db)
+    
+    recommendations = []
+    for song in ranked_candidates:
+        track_recommendation = TrackRecommendation(
+            spotify_id = song[0].spotify_id,
+            name = song[0].name,
+            artist = song[0].artist,
+            album = song[0].album,
+            explanation = None,
+            similarity_score = float(song[1])
+        )
+        recommendations.append(track_recommendation)
+    recommendation_response = RecommendationResponse(
+        recommendations = recommendations,
+        experiment_group = "A",
+        strategy = "cosine_similarity",
+        log_id = 0
+    )
+
+    return recommendation_response
+
 

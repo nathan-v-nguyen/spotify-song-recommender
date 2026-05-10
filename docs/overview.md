@@ -365,15 +365,17 @@ Completed:
 - app/recommender.py — complete: loads Annoy index, MinMaxScaler, and track_id_map at module level. `track_to_vector(track)` extracts 9 raw features from a Track ORM object. `get_candidates(query_vector, n=500)` normalizes via saved scaler and returns nearest spotify_ids. Verified with smoke test.
 - app/ranker.py — complete: Strategy A cosine similarity ranker. `ranker_a(query_vector, candidate_ids, db, n=10)` fetches candidate Track objects from DB, scales raw feature vectors with saved MinMaxScaler, computes cosine similarity via numpy unit-vector dot product, returns top n `(Track, float)` tuples sorted by score descending.
 - app/schemas.py — complete: `TrackRecommendationRequest` (spotify_id, limit with ge=1/le=50 validation), `TrackRecommendation` (single track response with from_attributes=True for ORM compatibility), `RecommendationResponse` (full envelope with recommendations list, experiment_group, strategy, log_id).
+- app/main.py — updated: `POST /recommend/track` wired end-to-end. Seed track lookup with 404 on missing spotify_id, full retrieval → ranking pipeline, returns `RecommendationResponse`. Rate limited and auth protected. Tested and verified with live request.
+- scripts/create_api_key.py — complete: generates cryptographically secure key with `secrets.token_hex(32)`, deterministically assigns A/B group using MD5 hash (consistent with request-time assignment), inserts into api_keys table via ORM.
 
 In progress:
 - Nothing
 
-Next steps (MVP recommendation pipeline, in order):
-1. Wire POST /recommend/track in app/main.py — look up seed track by spotify_id (404 if not found), call track_to_vector → get_candidates → ranker_a, log to recommendation_logs, return RecommendationResponse
-2. app/mood.py — Claude mood → audio feature targets (POST /recommend/mood prerequisite)
-3. app/explainer.py — batch Claude explanation generation for top 10 tracks
-4. Wire POST /recommend/mood in app/main.py
+Next steps (v1 pipeline, in order):
+1. app/mood.py — send mood string to Claude, parse JSON response into audio feature dict, return neutral fallback on any failure
+2. app/explainer.py — batch all 10 tracks in one Claude call, return list of explanation strings (null on failure)
+3. Wire POST /recommend/mood in app/main.py — validate mood input, call mood.py → get_candidates → ranker_a → explainer.py, return RecommendationResponse with explanations
+4. Wire recommendation_logs insert into both recommend endpoints (currently log_id is hardcoded to 0)
 
 ---
 
