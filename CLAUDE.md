@@ -169,15 +169,15 @@ brew services stop postgresql@15
 - `app/schemas.py` — complete: `TrackRecommendationRequest` (spotify_id, limit with ge=1/le=50), `TrackRecommendation` (single track with from_attributes=True for ORM compatibility), `RecommendationResponse` (full envelope with recommendations list, experiment_group, strategy, log_id).
 - `app/main.py` — updated: `POST /recommend/track` wired end-to-end. Seed track lookup with 404 on missing spotify_id, full retrieval → ranking pipeline, returns `RecommendationResponse`. Rate limited and auth protected. Tested and verified with live request.
 - `scripts/create_api_key.py` — complete: generates cryptographically secure key with `secrets.token_hex(32)`, deterministically assigns A/B group via MD5 hash (consistent with request-time assignment), inserts into `api_keys` table via ORM.
+- `app/mood.py` — complete: sends mood string to Claude, parses JSON response into audio feature dict, returns neutral fallback on any failure.
+- `app/explainer.py` — complete: batches all 10 tracks in one Claude call, returns list of explanation strings (null on failure).
+- `POST /recommend/mood` in `app/main.py` — complete: validates mood input, calls `mood.py` → `get_candidates` → `ranker_a` → `explainer.py`, returns `RecommendationResponse` with explanations.
 
 **In progress:**
 - Nothing
 
 **Next steps (v1 pipeline, in order):**
-1. `app/mood.py` — send mood string to Claude, parse JSON response into audio feature dict, return neutral fallback on any failure
-2. `app/explainer.py` — batch all 10 tracks in one Claude call, return list of explanation strings (null on failure)
-3. Wire `POST /recommend/mood` in `app/main.py` — validate mood input, call `mood.py` → `get_candidates` → `ranker_a` → `explainer.py`, return `RecommendationResponse` with explanations
-4. Wire `recommendation_logs` insert into both recommend endpoints (currently `log_id` is hardcoded to 0)
+1. Wire `recommendation_logs` insert into both recommend endpoints (currently `log_id` is hardcoded to 0)
 
 ---
 

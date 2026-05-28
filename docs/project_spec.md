@@ -81,25 +81,25 @@ The system runs a live A/B experiment comparing two ranking strategies, logs eve
 
 ### MVP — must work before anything else is built
 
-| Feature | Requirement |
-|---|---|
-| Seed track recommendation | POST /recommend/track accepts a Spotify track ID and returns 10 similar tracks |
-| Mood recommendation | POST /recommend/mood accepts a natural language string and returns 10 tracks via Claude translation |
-| Health check | GET /health returns {"status": "ok"} with no auth required |
-| API key auth | All write endpoints reject requests missing a valid X-API-Key header with 401 |
-| Docker | Entire app (API + PostgreSQL) starts with a single `docker compose up` command |
-| Database | tracks and recommendation_logs tables exist and are populated before any request can succeed |
+| Feature | Status | Requirement |
+|---|---|---|
+| Seed track recommendation | ✅ Done | POST /recommend/track accepts a Spotify track ID and returns 10 similar tracks |
+| Mood recommendation | ✅ Done | POST /recommend/mood accepts a natural language string and returns 10 tracks via Claude translation |
+| Health check | ✅ Done | GET /health returns {"status": "ok"} with no auth required |
+| API key auth | ✅ Done | All write endpoints reject requests missing a valid X-API-Key header with 401 |
+| Docker | ✅ Done | Entire app (API + PostgreSQL) starts with a single `docker compose up` command |
+| Database | ✅ Done | tracks and recommendation_logs tables exist and are populated before any request can succeed |
 
 ### v1 — core product functionality
 
-| Feature | Requirement |
-|---|---|
-| Explainability | Every recommendation includes a one-sentence Claude-generated explanation of why it fits |
-| Rate limiting | Max 10 requests per minute per IP; exceeding returns 429 with a clear error message |
-| Request logging | Every request writes to recommendation_logs with group, strategy, input, and output |
-| Input validation | All endpoints return 422 with a meaningful message on malformed input, never 500 |
-| Error handling | 400 for bad requests, 401 for missing auth, 404 for not found, 422 for validation, 429 for rate limit |
-| Strategy A ranker | Cosine similarity baseline ranker operational |
+| Feature | Status | Requirement |
+|---|---|---|
+| Explainability | ✅ Done | Every recommendation includes a one-sentence Claude-generated explanation of why it fits |
+| Rate limiting | ✅ Done | Max 10 requests per minute per IP; exceeding returns 429 with a clear error message |
+| Request logging | 🔲 Remaining | Every request writes to recommendation_logs with group, strategy, input, and output |
+| Input validation | ✅ Done | All endpoints return 422 with a meaningful message on malformed input, never 500 |
+| Error handling | ✅ Done | 400 for bad requests, 401 for missing auth, 404 for not found, 422 for validation, 429 for rate limit |
+| Strategy A ranker | ✅ Done | Cosine similarity baseline ranker operational |
 
 ### v2 — experiment infrastructure
 
@@ -249,7 +249,7 @@ Error 404 if spotify_id not in catalog.
 Auth required.  
 Request:
 ```json
-{"mood": "late night drive feeling nostalgic", "limit": 10}
+{"mood_string": "late night drive feeling nostalgic", "limit": 10}
 ```
 Response 200: same shape as /recommend/track  
 Error 422 if mood string is empty or over 500 characters.
@@ -508,7 +508,7 @@ main.py              ← route definitions, mounts all routers, calls Base.metad
 ```
 1. HTTP POST arrives at Uvicorn
    └── Headers: X-API-Key, Content-Type: application/json
-   └── Body: {"mood": "late night drive feeling nostalgic", "limit": 10}
+   └── Body: {"mood_string": "late night drive feeling nostalgic", "limit": 10}
 
 2. FastAPI middleware stack
    ├── slowapi rate limiter — checks IP against 10 req/min limit
