@@ -18,6 +18,11 @@ class TrackRecommendation(BaseModel):
   explanation: str | None
   similarity_score: float
 
+class MoodRecommendationRequest(BaseModel):
+  """What the user sends for mood-based recommendations"""
+  mood_string: str = Field(min_length=1,max_length=500)
+  limit: int = Field(default=10, ge=1, le=50)
+
 class RecommendationResponse(BaseModel):
   """The full response envelope that wraps everything"""
   recommendations: list[TrackRecommendation]

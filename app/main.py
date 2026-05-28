@@ -15,8 +15,11 @@ from app.limiter import limiter
 from app.models import Track, ApiKey
 from app.recommender import track_to_vector, get_candidates
 from app.ranker import ranker_a
-from app.schemas import TrackRecommendation, TrackRecommendationRequest, RecommendationResponse
+from app.schemas import TrackRecommendation, TrackRecommendationRequest, MoodRecommendationRequest, RecommendationResponse
 from app.auth import require_api_key
+from app.mood import translate_mood
+from app.explainer import explain_recommendations
+
 
 
 @asynccontextmanager
@@ -84,5 +87,32 @@ def recommend_track(
     )
 
     return recommendation_response
+
+@app.post("/recommend/mood")
+@limiter.limit("10/minute")
+def recommend_mood(
+    body: MoodRecommendationRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    api_key: ApiKey = Depends(require_api_key)
+) -> RecommendationResponse:
+    query_vector = list(translate_mood(body.mood).values()) + [50]
+    candidates = get_candidates(query_vector)
+    recommendations = ranker_a(query_vector, candidates, db)
+    tracks = [x[0] for x in recommendations]
+    scores = [x[1] for x in recommendations]
+    explanations = explain_recommendations(body.mood, tracks)
+    recs = [
+        TrackRecommendation(
+            spotify_id=track.spotify_id,
+            name = track.name,
+            artist = track.artist,
+            album=track.album,
+            explanation=explanations[i],
+            similarity_score=float(scores[i])
+        )
+        for i, track in enumerate(tracks)
+    ]
+    return RecommendationResponse(recommendations=recs,experiment_group="A", strategy="cosine_similarity" ,log_id=0)
 
 
