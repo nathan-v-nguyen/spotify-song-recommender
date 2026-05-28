@@ -37,11 +37,18 @@ def explain_recommendations(mood_string: str, tracks: list[Track]) -> list[str |
                 ),
             }],
         )
-        parsed = json.loads(message.content[0].text)
+        raw = message.content[0].text.strip()
+        if raw.startswith("```"):
+            lines = raw.split("\n")
+            raw = "\n".join(lines[1:])  # remove first line (```json)
+            raw = raw.rsplit("```", 1)[0]  # remove closing ```
+            raw = raw.strip()
+        parsed = json.loads(raw)
         if isinstance(parsed, list) and len(parsed) == len(tracks):
             return parsed
         logger.warning("Explainer returned %d items for %d tracks", len(parsed), len(tracks))
         return [None] * len(tracks)
     except Exception as e:
         logger.error("Explainer failed: %s", e)
+        print(f"EXPLAINER ERROR: {e}")
         return [None] * len(tracks)
