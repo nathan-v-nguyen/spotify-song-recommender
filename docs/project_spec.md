@@ -96,7 +96,7 @@ The system runs a live A/B experiment comparing two ranking strategies, logs eve
 |---|---|---|
 | Explainability | ✅ Done | Every recommendation includes a one-sentence Claude-generated explanation of why it fits |
 | Rate limiting | ✅ Done | Max 10 requests per minute per IP; exceeding returns 429 with a clear error message |
-| Request logging | 🔲 Remaining | Every request writes to recommendation_logs with group, strategy, input, and output |
+| Request logging | ✅ Done | Every request writes to recommendation_logs with group, strategy, input, and output |
 | Input validation | ✅ Done | All endpoints return 422 with a meaningful message on malformed input, never 500 |
 | Error handling | ✅ Done | 400 for bad requests, 401 for missing auth, 404 for not found, 422 for validation, 429 for rate limit |
 | Strategy A ranker | ✅ Done | Cosine similarity baseline ranker operational |

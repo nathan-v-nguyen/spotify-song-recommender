@@ -172,12 +172,13 @@ brew services stop postgresql@15
 - `app/mood.py` — complete: sends mood string to Claude, parses JSON response into audio feature dict, returns neutral fallback on any failure.
 - `app/explainer.py` — complete: batches all 10 tracks in one Claude call, returns list of explanation strings (null on failure).
 - `POST /recommend/mood` in `app/main.py` — complete: validates mood input, calls `mood.py` → `get_candidates` → `ranker_a` → `explainer.py`, returns `RecommendationResponse` with explanations.
+- `recommendation_logs` insert — complete: both `/recommend/track` and `/recommend/mood` write to `recommendation_logs` and return real `log_id`.
 
 **In progress:**
 - Nothing
 
-**Next steps (v1 pipeline, in order):**
-1. Wire `recommendation_logs` insert into both recommend endpoints (currently `log_id` is hardcoded to 0)
+**Next steps:**
+1. `frontend/app.py` — Streamlit demo: mood input, song cards with explanations, A/B badge, feedback buttons, live experiment sidebar
 
 ---
 

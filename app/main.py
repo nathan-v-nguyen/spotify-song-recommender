@@ -1,5 +1,6 @@
 """FastAPI application entry point — routes, startup, and middleware."""
 
+import json
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Depends, Request, HTTPException
@@ -12,7 +13,7 @@ from sqlalchemy import text
 from app.database import Base, engine, get_db
 from app.limiter import limiter
 
-from app.models import Track, ApiKey
+from app.models import Track, ApiKey, RecommendationLog
 from app.recommender import track_to_vector, get_candidates
 from app.ranker import ranker_a
 from app.schemas import TrackRecommendation, TrackRecommendationRequest, MoodRecommendationRequest, RecommendationResponse
@@ -38,6 +39,28 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Catch-all handler so raw Python exceptions never reach the user as unformatted 500s."""
     return JSONResponse(status_code=500, content={"error": "An unexpected error occurred", "code": 500})
+
+
+def _log_request(
+    db: Session,
+    request_type: str,
+    input_data: str,
+    experiment_group: str,
+    strategy_used: str,
+    spotify_ids: list[str],
+) -> int:
+    """Insert a recommendation_log row and return its generated id."""
+    log = RecommendationLog(
+        request_type=request_type,
+        input_data=input_data,
+        experiment_group=experiment_group,
+        strategy_used=strategy_used,
+        recommendations=json.dumps(spotify_ids),
+    )
+    db.add(log)
+    db.commit()
+    db.refresh(log)
+    return log.id
 
 
 @app.get("/health")
@@ -68,25 +91,31 @@ def recommend_track(
     candidates = get_candidates(query_vector)
     ranked_candidates = ranker_a(query_vector, candidates, db)
     
-    recommendations = []
-    for song in ranked_candidates:
-        track_recommendation = TrackRecommendation(
-            spotify_id = song[0].spotify_id,
-            name = song[0].name,
-            artist = song[0].artist,
-            album = song[0].album,
-            explanation = None,
-            similarity_score = float(song[1])
+    recommendations = [
+        TrackRecommendation(
+            spotify_id=song[0].spotify_id,
+            name=song[0].name,
+            artist=song[0].artist,
+            album=song[0].album,
+            explanation=None,
+            similarity_score=float(song[1]),
         )
-        recommendations.append(track_recommendation)
-    recommendation_response = RecommendationResponse(
-        recommendations = recommendations,
-        experiment_group = "A",
-        strategy = "cosine_similarity",
-        log_id = 0
+        for song in ranked_candidates
+    ]
+    log_id = _log_request(
+        db=db,
+        request_type="track",
+        input_data=body.spotify_id,
+        experiment_group="A",
+        strategy_used="cosine_similarity",
+        spotify_ids=[r.spotify_id for r in recommendations],
     )
-
-    return recommendation_response
+    return RecommendationResponse(
+        recommendations=recommendations,
+        experiment_group="A",
+        strategy="cosine_similarity",
+        log_id=log_id,
+    )
 
 @app.post("/recommend/mood")
 @limiter.limit("10/minute")
@@ -105,14 +134,27 @@ def recommend_mood(
     recs = [
         TrackRecommendation(
             spotify_id=track.spotify_id,
-            name = track.name,
-            artist = track.artist,
+            name=track.name,
+            artist=track.artist,
             album=track.album,
             explanation=explanations[i],
-            similarity_score=float(scores[i])
+            similarity_score=float(scores[i]),
         )
         for i, track in enumerate(tracks)
     ]
-    return RecommendationResponse(recommendations=recs,experiment_group="A", strategy="cosine_similarity" ,log_id=0)
+    log_id = _log_request(
+        db=db,
+        request_type="mood",
+        input_data=body.mood_string,
+        experiment_group="A",
+        strategy_used="cosine_similarity",
+        spotify_ids=[r.spotify_id for r in recs],
+    )
+    return RecommendationResponse(
+        recommendations=recs,
+        experiment_group="A",
+        strategy="cosine_similarity",
+        log_id=log_id,
+    )
 
 
