@@ -20,3 +20,4 @@ data/
 
 # Generated model artifacts — rebuild with scripts/build_index.py
 models/
+frontend/.streamlit/secrets.toml

@@ -125,7 +125,7 @@ def recommend_mood(
     db: Session = Depends(get_db),
     api_key: ApiKey = Depends(require_api_key)
 ) -> RecommendationResponse:
-    query_vector = list(translate_mood(body.mood_string).values()) + [50]
+    query_vector = list(translate_mood(body.mood_string).values()) + [90] # popularity score
     candidates = get_candidates(query_vector)
     recommendations = ranker_a(query_vector, candidates, db)
     tracks = [x[0] for x in recommendations]
