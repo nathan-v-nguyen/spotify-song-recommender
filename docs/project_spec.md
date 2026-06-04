@@ -103,24 +103,24 @@ The system runs a live A/B experiment comparing two ranking strategies, logs eve
 
 ### v2 — experiment infrastructure
 
-| Feature | Requirement |
-|---|---|
-| A/B assignment | API key hashed to deterministically assign Group A or B — same key always same group |
-| Strategy B ranker | Mood-weighted scikit-learn ranking model trained and operational |
-| Feedback endpoint | POST /feedback accepts log ID, track ID, and rating; stores in feedback table |
-| Experiment results | GET /experiments/results returns per-strategy metrics and statistical significance flag |
-| Cold start handling | System returns valid recommendations even when user has no prior request history |
-| Test suite | 10+ pytest tests covering all endpoints, happy path and at least one error case per endpoint |
-| CI pipeline | GitHub Actions runs full test suite on every push to main; failing tests block merge |
+| Feature | Status | Requirement |
+|---|---|---|
+| A/B assignment | ⬜ Not started | API key hashed to deterministically assign Group A or B — same key always same group |
+| Strategy B ranker | ⬜ Not started | Mood-weighted LightGBM ranking model trained and operational |
+| Feedback endpoint | ⬜ Not started | POST /feedback accepts log ID, track ID, and rating; stores in feedback table |
+| Experiment results | ⬜ Not started | GET /experiments/results returns per-strategy metrics and statistical significance flag |
+| Cold start handling | ⬜ Not started | System returns valid recommendations even when user has no prior request history |
+| Test suite | ⬜ Not started | 10+ pytest tests covering all endpoints, happy path and at least one error case per endpoint |
+| CI pipeline | ⬜ Not started | GitHub Actions runs full test suite on every push to main; failing tests block merge |
 
 ### Later — polish and deployment
 
-| Feature | Requirement |
-|---|---|
-| Streamlit frontend | Single-page UI with mood input, song cards, explanation text, A/B badge, feedback buttons, live experiment sidebar |
-| Render deployment | API live at a public Render URL; Streamlit app live at a separate public URL |
-| Catalog stats | GET /catalog/stats returns total track count and audio feature distributions |
-| Mood history | Track mood inputs per API key over time; surface patterns back to user |
+| Feature | Status | Requirement |
+|---|---|---|
+| Streamlit frontend | ✅ Done | Single-page demo (Moodify) with mood/track toggle, song cards with similarity bars and Claude explanations, hover-reveal Spotify links. Runs with `streamlit run frontend/app.py`. |
+| Render deployment | ⬜ Not started | API live at a public Render URL; Streamlit app live at a separate public URL |
+| Catalog stats | ⬜ Not started | GET /catalog/stats returns total track count and audio feature distributions |
+| Mood history | ⬜ Not started | Track mood inputs per API key over time; surface patterns back to user |
 
 ### Not in scope
 

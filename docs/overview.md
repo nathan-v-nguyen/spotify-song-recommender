@@ -361,21 +361,27 @@ Completed:
 - app/auth.py — complete: require_api_key dependency validates X-API-Key header against api_keys table, returns ApiKey record for A/B group access
 - scripts/seed_catalog.py — complete: loads tracks from Kaggle CSV (Spotify audio features API deprecated 2024), deduplicates on spotify_id, writes to tracks table with popularity as an additional feature. 89,740 tracks loaded.
 - scripts/build_index.py — complete: fits MinMaxScaler on 9-feature matrix (energy, valence, danceability, tempo, acousticness, instrumentalness, loudness, speechiness, popularity), builds Annoy index (50 trees, angular distance), saves 3 artifacts to models/: annoy_index.ann (60MB), track_id_map.json (2.2MB), scaler.pkl (1KB). Verified — nearest neighbor queries return valid spotify_ids.
-
 - app/recommender.py — complete: loads Annoy index, MinMaxScaler, and track_id_map at module level. `track_to_vector(track)` extracts 9 raw features from a Track ORM object. `get_candidates(query_vector, n=500)` normalizes via saved scaler and returns nearest spotify_ids. Verified with smoke test.
 - app/ranker.py — complete: Strategy A cosine similarity ranker. `ranker_a(query_vector, candidate_ids, db, n=10)` fetches candidate Track objects from DB, scales raw feature vectors with saved MinMaxScaler, computes cosine similarity via numpy unit-vector dot product, returns top n `(Track, float)` tuples sorted by score descending.
 - app/schemas.py — complete: `TrackRecommendationRequest` (spotify_id, limit with ge=1/le=50 validation), `TrackRecommendation` (single track response with from_attributes=True for ORM compatibility), `RecommendationResponse` (full envelope with recommendations list, experiment_group, strategy, log_id).
 - app/main.py — updated: `POST /recommend/track` wired end-to-end. Seed track lookup with 404 on missing spotify_id, full retrieval → ranking pipeline, returns `RecommendationResponse`. Rate limited and auth protected. Tested and verified with live request.
 - scripts/create_api_key.py — complete: generates cryptographically secure key with `secrets.token_hex(32)`, deterministically assigns A/B group using MD5 hash (consistent with request-time assignment), inserts into api_keys table via ORM.
+- app/mood.py — complete: sends mood string to Claude (claude-sonnet-4-20250514), parses JSON response into 8-feature audio feature dict, returns neutral fallback values on any Claude failure or JSON parse error.
+- app/explainer.py — complete: batches all 10 tracks in a single Claude call, returns list of explanation strings ordered to match input tracks, returns list of nulls on any failure without failing the request.
+- app/main.py — updated: `POST /recommend/mood` wired end-to-end. Validates mood input (1–500 chars), calls mood.py → get_candidates → ranker_a → explainer.py, returns RecommendationResponse with explanations. Rate limited and auth protected.
+- recommendation_logs insert — complete: both `/recommend/track` and `/recommend/mood` write a RecommendationLog row and return the real generated log_id in the response envelope.
+- frontend/app.py (Moodify) — complete: Streamlit single-page demo app. Dark minimal UI with olive green background (#6B8F71), Mood/Track mode toggle (st.radio styled as pills), text input, Find Music button, 10 song cards with similarity score bars and Claude explanations, hover-reveal Spotify links and A/B badges. Runs with `streamlit run frontend/app.py`.
 
 In progress:
 - Nothing
 
-Next steps (v1 pipeline, in order):
-1. app/mood.py — send mood string to Claude, parse JSON response into audio feature dict, return neutral fallback on any failure
-2. app/explainer.py — batch all 10 tracks in one Claude call, return list of explanation strings (null on failure)
-3. Wire POST /recommend/mood in app/main.py — validate mood input, call mood.py → get_candidates → ranker_a → explainer.py, return RecommendationResponse with explanations
-4. Wire recommendation_logs insert into both recommend endpoints (currently log_id is hardcoded to 0)
+Next steps (v2, in order):
+1. POST /feedback endpoint — accept log_id, spotify_id, rating (1 or -1), write to feedback table
+2. GET /experiments/results — aggregate recommendation_logs + feedback by group, return per-strategy metrics
+3. Strategy B ranker — LightGBM mood-weighted model (scripts/train_ranker_b.py + app/ranker.py update)
+4. A/B assignment wired to actual group — currently both endpoints hardcode experiment_group="A"; wire experiment.py to assign group by API key hash
+5. pytest suite — 10+ tests covering all endpoints, happy path and error cases, Anthropic SDK mocked in CI
+6. GitHub Actions CI — run full test suite on push to main
 
 ---
 
