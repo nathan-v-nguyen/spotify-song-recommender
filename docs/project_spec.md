@@ -120,7 +120,7 @@ The system runs a live A/B experiment comparing two ranking strategies, logs eve
 |---|---|---|
 | Streamlit frontend | ✅ Done | Single-page demo (Moodify) with mood/track toggle, song cards with similarity bars and Claude explanations, hover-reveal Spotify links. Track mode uses a song-name search box → dropdown of matches → Find Music, backed by GET /search/tracks. Runs with `streamlit run frontend/app.py`. |
 | Track search / autocomplete | ✅ Done | GET /search/tracks matches a song name against track name or artist (ILIKE, popularity-ordered, top 10) so users pick their favorite song by name instead of pasting a Spotify ID |
-| Render deployment | ⬜ Not started | API live at a public Render URL; Streamlit app live at a separate public URL |
+| Render deployment | 🟡 In progress | Repo prepped: render.yaml (API + Postgres), Dockerfile honors $PORT, database.py handles Render's postgres:// scheme, models/ artifacts committed, frontend reads API_BASE/API_KEY from secrets. Remaining: provision on Render, seed prod DB, set secrets, deploy frontend to Streamlit Cloud. See Section 21 runbook. |
 | Catalog stats | ⬜ Not started | GET /catalog/stats returns total track count and audio feature distributions |
 | Mood history | ⬜ Not started | Track mood inputs per API key over time; surface patterns back to user |
 
@@ -981,23 +981,26 @@ Jobs:
 
 ## 21. Render Deployment Architecture
 
-### Services on Render
+### Services
 
-| Service | Type | Plan | Notes |
+| Service | Platform | Plan | Notes |
 |---|---|---|---|
-| `spotify-recsys-api` | Web Service | Free | Docker deployment; port 8000; auto-deploy on push to main |
-| `spotify-recsys-db` | PostgreSQL | Free (90 days) | Managed Postgres; connection string in env var |
-| `spotify-recsys-frontend` | Web Service | Free | Streamlit app; separate repo or sub-directory |
+| `spotify-recsys-api` | Render Web Service | Free | Docker deployment; binds Render's `$PORT`; provisioned via `render.yaml` Blueprint |
+| `spotify-recsys-db` | Render PostgreSQL | Free (90 days) | Managed Postgres; `DATABASE_URL` auto-wired into the API service |
+| Streamlit frontend | Streamlit Community Cloud | Free | Deployed from `frontend/app.py`; `API_BASE` + `API_KEY` set in the app's Secrets UI |
 
 ### render.yaml (Infrastructure as Code)
+
+The committed `render.yaml` provisions the API + Postgres. Only secrets the API needs **at runtime** are `DATABASE_URL` (auto) and `ANTHROPIC_API_KEY` (manual). Spotify credentials are NOT needed at runtime — they're only used by `scripts/seed_catalog.py`, which is run locally during seeding.
 
 ```yaml
 services:
   - type: web
     name: spotify-recsys-api
-    env: docker
+    runtime: docker
     dockerfilePath: ./Dockerfile
     plan: free
+    healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -1005,12 +1008,6 @@ services:
           property: connectionString
       - key: ANTHROPIC_API_KEY
         sync: false     # set manually in Render dashboard — never in yaml
-      - key: SPOTIFY_CLIENT_ID
-        sync: false
-      - key: SPOTIFY_CLIENT_SECRET
-        sync: false
-      - key: API_KEY
-        sync: false
 
 databases:
   - name: spotify-recsys-db
@@ -1019,25 +1016,45 @@ databases:
     user: postgres
 ```
 
-### Deployment Checklist
+### Deployment Runbook
 
+**Prerequisites baked into the repo:**
+- `models/` artifacts (annoy_index.ann, scaler.pkl, track_id_map.json) are committed so the API can load them at startup. `app/recommender.py` loads them at import time — without them the service crashes on boot.
+- `app/database.py` normalizes Render's `postgres://` scheme to `postgresql://` for SQLAlchemy 2.0.
+- The Dockerfile CMD honors `$PORT`; the FastAPI lifespan runs `Base.metadata.create_all`, so table schema is created on first boot (no separate migration step required on Render).
+
+**Steps:**
 ```
-Before first deploy:
-[ ] models/annoy_index.ann built and committed (or Render build step runs build_index.py)
-[ ] models/ranker_b.pkl trained and committed
-[ ] All secrets set in Render dashboard (never in render.yaml)
-[ ] DATABASE_URL uses Render's internal connection string (not localhost)
-[ ] Alembic migrations run as part of startup: add to CMD in Dockerfile for Render
+1. Push to GitHub. Render dashboard → New → Blueprint → connect repo.
+   Render reads render.yaml and provisions the API + Postgres.
 
-Startup command for Render (overrides Dockerfile CMD):
-  alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
+2. Wait for the database to finish, then copy its EXTERNAL connection string.
 
-After deploy:
-[ ] GET /health returns 200 with index_loaded: true
-[ ] POST /recommend/mood works end to end with real API key
-[ ] Render logs show no startup errors
-[ ] Note 90-day PostgreSQL expiry date in README
+3. Seed the prod DB from your local machine (catalog is not in the repo):
+     export DATABASE_URL="<render external connection string>"
+     alembic upgrade head             # create schema (or rely on lifespan create_all)
+     python scripts/seed_catalog.py   # load ~90k tracks from the local Kaggle CSV
+     python scripts/create_api_key.py # COPY the printed key — the frontend needs it
+
+4. In the Render web service → Environment, set ANTHROPIC_API_KEY. Redeploy.
+
+5. Deploy the frontend on Streamlit Community Cloud (point at frontend/app.py).
+   In the app's Secrets, set:
+     API_BASE = "https://<your-service>.onrender.com"
+     API_KEY  = "<key from step 3>"
 ```
+
+**After deploy — verify:**
+```
+[ ] GET /health returns {"status": "ok", "db": "connected"}
+[ ] POST /recommend/mood and /recommend/track work end to end with the real API key
+[ ] Track search autocomplete returns results in the Streamlit UI
+[ ] Render logs show no startup errors (esp. no missing models/ files)
+```
+
+**Free-tier caveats (document in README):**
+- The API spins down after ~15 min idle → first request cold-starts (~50s). Hit `/health` to warm it before a live demo.
+- **Render free PostgreSQL expires 90 days after creation.** Record the creation date and expiry date in the README; re-provision or upgrade before it lapses or the live demo will break.
 
 ---
 
