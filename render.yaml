@@ -20,4 +20,4 @@ databases:
   - name: spotify-recsys-db
     plan: free
     databaseName: recsys
-    user: postgres
+
