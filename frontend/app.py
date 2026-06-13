@@ -4,8 +4,9 @@ import streamlit as st
 import requests
 
 # ─── Constants ───────────────────────────────────────────────────────────────
-API_BASE = "http://localhost:8000"
-API_KEY = st.secrets["API_KEY"]  # replace with actual key
+# Read from Streamlit secrets in deployment; fall back to localhost for local dev.
+API_BASE = st.secrets.get("API_BASE", "http://localhost:8000")
+API_KEY = st.secrets.get("API_KEY", "")
 
 # ─── Page config ─────────────────────────────────────────────────────────────
 st.set_page_config(page_title="Moodify", page_icon="🎵", layout="wide")
@@ -37,6 +38,21 @@ def fetch_recommendations(text: str, mode: str) -> dict | None:
         return None
 
 
+@st.cache_data(show_spinner=False, ttl=300)
+def search_tracks(query: str) -> list[dict]:
+    """GET /search/tracks for autocomplete matches; cached per query, [] on failure."""
+    try:
+        r = requests.get(
+            f"{API_BASE}/search/tracks",
+            params={"q": query},
+            headers=api_headers(),
+            timeout=10,
+        )
+        return r.json().get("results", []) if r.status_code == 200 else []
+    except Exception:
+        return []
+
+
 
 
 # ─── HTML renderers ──────────────────────────────────────────────────────────
@@ -52,30 +68,32 @@ def render_card(i: int, track: dict, strategy: str) -> str:
     badge_cls = "strategy-b" if is_b else "strategy-a"
     badge_label = "Strategy B" if is_b else "Strategy A"
 
-    return f"""
-<div class="song-card">
-  <div class="ab-badge {badge_cls}">{badge_label}</div>
-  <div class="card-main">
-    <span class="track-num">{i:02d}</span>
-    <div class="track-info">
-      <div class="track-name">{name}</div>
-      <div class="track-artist">{artist}</div>
-      <div class="score-row">
-        <div class="score-bar-bg">
-          <div class="score-bar-fill" style="width:{score_pct}%"></div>
-        </div>
-        <span class="score-text">{score_pct}%</span>
-      </div>
-      {f'<div class="track-explanation">{expl}</div>' if expl else ""}
-    </div>
-  </div>
-  <div class="card-hover">
-    {f'<div class="track-album">{album}</div>' if album else ""}
-    <a href="https://open.spotify.com/track/{sid}" target="_blank" class="spotify-link">
-      Open in Spotify →
-    </a>
-  </div>
-</div>"""
+    expl_html = f'<div class="track-explanation">{expl}</div>' if expl else ""
+    album_html = f'<div class="track-album">{album}</div>' if album else ""
+
+    # Single line, no indentation — Streamlit's markdown parser treats lines indented
+    # 4+ spaces as code blocks, which would render the raw HTML and break card nesting.
+    return (
+        f'<div class="song-card">'
+        f'<div class="ab-badge {badge_cls}">{badge_label}</div>'
+        f'<div class="card-main">'
+        f'<span class="track-num">{i:02d}</span>'
+        f'<div class="track-info">'
+        f'<div class="track-name">{name}</div>'
+        f'<div class="track-artist">{artist}</div>'
+        f'<div class="score-row">'
+        f'<div class="score-bar-bg"><div class="score-bar-fill" style="width:{score_pct}%"></div></div>'
+        f'<span class="score-text">{score_pct}%</span>'
+        f'</div>'
+        f'{expl_html}'
+        f'</div>'
+        f'</div>'
+        f'<div class="card-hover">'
+        f'{album_html}'
+        f'<a href="https://open.spotify.com/track/{sid}" target="_blank" class="spotify-link">Open in Spotify →</a>'
+        f'</div>'
+        f'</div>'
+    )
 
 
 
@@ -189,6 +207,49 @@ section.main { background: #6B8F71 !important; }
 [data-testid="stFormSubmitButton"] button:hover { background: #1ED760 !important; }
 [data-testid="stFormSubmitButton"] button:focus { outline: none !important; box-shadow: none !important; }
 
+/* ── Find Music (track-mode regular button) ── */
+.stButton button,
+[data-testid="stButton"] button,
+[data-testid="baseButton-secondary"],
+[data-testid="stBaseButton-secondary"],
+.stButton button[kind="secondary"] {
+  background: #1DB954 !important;
+  color: #0A0A0A !important;
+  border: none !important;
+  border-radius: 24px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  padding: 8px 28px !important;
+  width: fit-content !important;
+  display: block !important;
+  margin: 0 auto !important;
+}
+.stButton button:hover,
+[data-testid="stButton"] button:hover { background: #1ED760 !important; }
+.stButton button:focus,
+[data-testid="stButton"] button:focus { outline: none !important; box-shadow: none !important; }
+.stButton button:disabled,
+[data-testid="stButton"] button:disabled {
+  background: #2A2A2A !important;
+  color: #666 !important;
+  cursor: not-allowed !important;
+}
+
+/* ── Track search dropdown (selectbox) ── */
+[data-testid="stSelectbox"] label { display: none; }
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+  background: #1A1A1A !important;
+  border: 1px solid #333 !important;
+  border-radius: 8px !important;
+  color: #fff !important;
+}
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within {
+  border-color: #1DB954 !important;
+  box-shadow: 0 0 0 1px #1DB954 !important;
+}
+[data-testid="stSelectbox"] div[data-baseweb="select"] span { color: #fff !important; }
+[data-testid="stSelectbox"] svg { fill: #A0A0A0 !important; }
+
 /* ── Song cards ── */
 .song-card {
   background: #141414;
@@ -288,31 +349,74 @@ mode = st.session_state.mode
 st.markdown('<div style="height:16px"></div>', unsafe_allow_html=True)
 
 # ─── Input + submit ───────────────────────────────────────────────────────────
-placeholder = (
-    "Describe how you're feeling or what you're doing..."
-    if mode == "mood"
-    else "Enter a Spotify track ID..."
-)
+if mode == "mood":
+    # Mood mode: free-text in a form, submitted on Enter or button click.
+    with st.form("mood_form", clear_on_submit=False):
+        mood_input = st.text_input(
+            "q",
+            placeholder="Describe how you're feeling or what you're doing...",
+            label_visibility="collapsed",
+        )
+        st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
+        _, fc, _ = st.columns([2, 2, 2])
+        with fc:
+            submitted = st.form_submit_button("Find Music")
 
-with st.form("rec_form", clear_on_submit=False):
-    user_input = st.text_input("q", placeholder=placeholder, label_visibility="collapsed")
-    st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
-    _, fc, _ = st.columns([2, 2, 2])
-    with fc:
-        submitted = st.form_submit_button("Find Music")
-
-# ─── Handle submission ────────────────────────────────────────────────────────
-if submitted:
-    if not user_input.strip():
-        st.session_state.error = "Please enter something to search."
-    else:
-        st.session_state.error = None
-        with st.spinner("Finding your music..."):
-            data = fetch_recommendations(user_input.strip(), mode)
-        if data:
-            st.session_state.results = data
+    if submitted:
+        if not mood_input.strip():
+            st.session_state.error = "Please enter something to search."
         else:
-            st.session_state.error = "Something went wrong. Make sure the API is running."
+            st.session_state.error = None
+            with st.spinner("Finding your music..."):
+                data = fetch_recommendations(mood_input.strip(), "mood")
+            st.session_state.results = data
+            if not data:
+                st.session_state.error = "Something went wrong. Make sure the API is running."
+
+else:
+    # Track mode: type a song name → pick a match from the dropdown → Find Music.
+    # Wrapped in a bordered container so the layout matches the mood form's white box.
+    with st.container(border=True):
+        search_q = st.text_input(
+            "track_search",
+            placeholder="Search your favorite song...",
+            label_visibility="collapsed",
+            key="track_search",
+        )
+
+        matches = search_tracks(search_q.strip()) if search_q.strip() else []
+        options = {f'{m["name"]} — {m["artist"]}': m["spotify_id"] for m in matches}
+
+        selected_label = None
+        if options:
+            selected_label = st.selectbox(
+                "match",
+                options=list(options.keys()),
+                label_visibility="collapsed",
+                key="track_match",
+            )
+        elif search_q.strip():
+            st.markdown(
+                '<p style="color:#A0A0A0;font-size:13px;text-align:center;margin-top:8px">'
+                "No matching songs found.</p>",
+                unsafe_allow_html=True,
+            )
+
+        st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
+        _, fc, _ = st.columns([2, 2, 2])
+        with fc:
+            submitted = st.button("Find Music", key="track_submit")
+
+    if submitted:
+        if not selected_label:
+            st.session_state.error = "Please search and select a song first."
+        else:
+            st.session_state.error = None
+            with st.spinner("Finding your music..."):
+                data = fetch_recommendations(options[selected_label], "track")
+            st.session_state.results = data
+            if not data:
+                st.session_state.error = "Something went wrong. Make sure the API is running."
 
 # ─── Error message ────────────────────────────────────────────────────────────
 if st.session_state.error:

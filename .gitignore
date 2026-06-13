@@ -18,6 +18,6 @@ __pycache__/
 data/
 .cache
 
-# Generated model artifacts — rebuild with scripts/build_index.py
-models/
+# Model artifacts (models/) are committed so Render can load them at startup —
+# rebuild locally with scripts/build_index.py.
 frontend/.streamlit/secrets.toml

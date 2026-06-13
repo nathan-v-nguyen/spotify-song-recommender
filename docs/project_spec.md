@@ -57,11 +57,12 @@ The system runs a live A/B experiment comparing two ranking strategies, logs eve
 8. Response returned: 10 tracks with name, artist, Spotify ID, explanation, and experiment group badge
 
 **Flow 2 — Seed track recommendation (secondary flow)**
-1. User sends a POST request with a Spotify track ID and their API key
-2. System looks up track's audio features from database
-3. System searches Annoy index for similar tracks
-4. Same ranking and logging pipeline as Flow 1
-5. Response returned: 10 similar tracks with explanations
+1. User types their favorite song's name; the frontend calls GET /search/tracks and shows matching tracks in a dropdown to pick from
+2. User selects a track, and the system sends its Spotify track ID with the API key
+3. System looks up track's audio features from database
+4. System searches Annoy index for similar tracks
+5. Same ranking and logging pipeline as Flow 1
+6. Response returned: 10 similar tracks with explanations
 
 **Flow 3 — Feedback submission**
 1. User sends a POST request with a recommendation log ID, a track Spotify ID, and a rating (1 or -1)
@@ -117,7 +118,8 @@ The system runs a live A/B experiment comparing two ranking strategies, logs eve
 
 | Feature | Status | Requirement |
 |---|---|---|
-| Streamlit frontend | ✅ Done | Single-page demo (Moodify) with mood/track toggle, song cards with similarity bars and Claude explanations, hover-reveal Spotify links. Runs with `streamlit run frontend/app.py`. |
+| Streamlit frontend | ✅ Done | Single-page demo (Moodify) with mood/track toggle, song cards with similarity bars and Claude explanations, hover-reveal Spotify links. Track mode uses a song-name search box → dropdown of matches → Find Music, backed by GET /search/tracks. Runs with `streamlit run frontend/app.py`. |
+| Track search / autocomplete | ✅ Done | GET /search/tracks matches a song name against track name or artist (ILIKE, popularity-ordered, top 10) so users pick their favorite song by name instead of pasting a Spotify ID |
 | Render deployment | ⬜ Not started | API live at a public Render URL; Streamlit app live at a separate public URL |
 | Catalog stats | ⬜ Not started | GET /catalog/stats returns total track count and audio feature distributions |
 | Mood history | ⬜ Not started | Track mood inputs per API key over time; surface patterns back to user |
@@ -218,6 +220,25 @@ Response 200:
 ```json
 {"status": "ok", "catalog_size": 4823, "index_loaded": true}
 ```
+
+#### GET /search/tracks
+No auth required. Rate limited to 30 requests per minute per IP.  
+Query params: `q` (required, 1–100 chars) — partial song name or artist.  
+Matches `q` against track name or artist (case-insensitive), ordered by popularity, capped at 10.  
+Response 200:
+```json
+{
+  "results": [
+    {
+      "spotify_id": "4u7EnebtmKWzUH433cf5Qv",
+      "name": "Bohemian Rhapsody - Remastered 2011",
+      "artist": "Queen",
+      "album": "A Night At The Opera (2011 Remaster)"
+    }
+  ]
+}
+```
+Error 422 if `q` is empty or over 100 characters.
 
 #### POST /recommend/track
 Auth required.  

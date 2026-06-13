@@ -11,4 +11,6 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Shell form so ${PORT} expands — Render injects PORT at runtime; locally it
+# falls back to 8000 (matching docker-compose).
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}

@@ -1,0 +1,23 @@
+# Render Infrastructure-as-Code: FastAPI service + managed Postgres.
+# The Streamlit frontend is deployed separately on Streamlit Community Cloud.
+# Secrets (sync: false) must be set manually in the Render dashboard — never here.
+services:
+  - type: web
+    name: spotify-recsys-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: spotify-recsys-db
+          property: connectionString
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+databases:
+  - name: spotify-recsys-db
+    plan: free
+    databaseName: recsys
+    user: postgres

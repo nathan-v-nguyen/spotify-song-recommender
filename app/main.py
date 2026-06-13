@@ -3,12 +3,12 @@
 import json
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Depends, Request, HTTPException
+from fastapi import FastAPI, Depends, Request, HTTPException, Query
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import text, or_
 
 from app.database import Base, engine, get_db
 from app.limiter import limiter
@@ -16,7 +16,7 @@ from app.limiter import limiter
 from app.models import Track, ApiKey, RecommendationLog
 from app.recommender import track_to_vector, get_candidates
 from app.ranker import ranker_a
-from app.schemas import TrackRecommendation, TrackRecommendationRequest, MoodRecommendationRequest, RecommendationResponse
+from app.schemas import TrackRecommendation, TrackRecommendationRequest, MoodRecommendationRequest, RecommendationResponse, TrackSearchResult, TrackSearchResponse
 from app.auth import require_api_key
 from app.mood import translate_mood
 from app.explainer import explain_recommendations
@@ -74,6 +74,27 @@ def health(request: Request, db: Session = Depends(get_db)) -> dict:
         return {"status": "degraded", "db": "unreachable"}
 
 
+@app.get("/search/tracks")
+@limiter.limit("30/minute")
+def search_tracks(
+    request: Request,
+    q: str = Query(min_length=1, max_length=100),
+    db: Session = Depends(get_db),
+) -> TrackSearchResponse:
+    """Autocomplete catalog search — return up to 10 tracks whose name or artist matches q."""
+    pattern = f"%{q.strip()}%"
+    matches = (
+        db.query(Track)
+        .filter(or_(Track.name.ilike(pattern), Track.artist.ilike(pattern)))
+        .order_by(Track.popularity.desc().nullslast())
+        .limit(10)
+        .all()
+    )
+    return TrackSearchResponse(
+        results=[TrackSearchResult.model_validate(track) for track in matches]
+    )
+
+
 @app.post("/recommend/track")
 @limiter.limit("10/minute")
 def recommend_track(
@@ -125,7 +146,7 @@ def recommend_mood(
     db: Session = Depends(get_db),
     api_key: ApiKey = Depends(require_api_key)
 ) -> RecommendationResponse:
-    query_vector = list(translate_mood(body.mood_string).values()) + [90] # popularity score
+    query_vector = list(translate_mood(body.mood_string).values()) + [75] # popularity score
     candidates = get_candidates(query_vector)
     recommendations = ranker_a(query_vector, candidates, db)
     tracks = [x[0] for x in recommendations]

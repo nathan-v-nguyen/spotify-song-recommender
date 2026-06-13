@@ -18,6 +18,19 @@ class TrackRecommendation(BaseModel):
   explanation: str | None
   similarity_score: float
 
+class TrackSearchResult(BaseModel):
+  """A single track match returned by the search/autocomplete endpoint"""
+  model_config = ConfigDict(from_attributes=True)
+
+  spotify_id: str
+  name: str
+  artist: str
+  album: str | None
+
+class TrackSearchResponse(BaseModel):
+  """Wraps the list of track matches for an autocomplete query"""
+  results: list[TrackSearchResult]
+
 class MoodRecommendationRequest(BaseModel):
   """What the user sends for mood-based recommendations"""
   mood_string: str = Field(min_length=1,max_length=500)

@@ -159,6 +159,7 @@ created_at      DateTime, server default now()
 
 ```
 GET  /health                     → system health check, no auth required
+GET  /search/tracks              → autocomplete: song name → up to 10 matching tracks, no auth required
 POST /recommend/track            → seed track in, top 10 similar tracks out
 POST /recommend/mood             → natural language mood → top 10 tracks with explanations
 GET  /recommend/explain/{id}     → explanation for a specific recommendation log
@@ -168,7 +169,7 @@ GET  /catalog/stats              → total tracks, audio feature distributions
 GET  /track/{spotify_id}         → details on a specific track
 ```
 
-All write endpoints require `X-API-Key` header. Rate limited to 10 requests per minute per IP.
+All write endpoints require `X-API-Key` header. Rate limited to 10 requests per minute per IP (`/search/tracks` allows 30/min to support typing).
 
 ---
 
@@ -371,6 +372,8 @@ Completed:
 - app/main.py — updated: `POST /recommend/mood` wired end-to-end. Validates mood input (1–500 chars), calls mood.py → get_candidates → ranker_a → explainer.py, returns RecommendationResponse with explanations. Rate limited and auth protected.
 - recommendation_logs insert — complete: both `/recommend/track` and `/recommend/mood` write a RecommendationLog row and return the real generated log_id in the response envelope.
 - frontend/app.py (Moodify) — complete: Streamlit single-page demo app. Dark minimal UI with olive green background (#6B8F71), Mood/Track mode toggle (st.radio styled as pills), text input, Find Music button, 10 song cards with similarity score bars and Claude explanations, hover-reveal Spotify links and A/B badges. Runs with `streamlit run frontend/app.py`.
+- GET /search/tracks — complete: autocomplete endpoint. Case-insensitive ILIKE match on track name OR artist, ordered by popularity descending, capped at 10 results. No auth, rate limited 30/min. Backs the Track-mode search box in the frontend.
+- frontend/app.py Track mode — updated: replaced the raw Spotify-ID field with a search-box → dropdown → Find Music flow. User types a song name, matches populate a styled selectbox as "Song — Artist", and the selected track's spotify_id is sent to /recommend/track. Search results cached with st.cache_data (5-min TTL). Note: Streamlit reruns on Enter/blur, not per keystroke, so the dropdown refreshes after typing + Enter rather than as a live typeahead.
 
 In progress:
 - Nothing
