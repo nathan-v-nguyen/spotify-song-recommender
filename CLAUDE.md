@@ -213,4 +213,5 @@ brew services stop postgresql@15
 
 - [Overview](docs/overview.md) — full project context, career goals, background
 - [Project Spec](docs/project_spec.md) — detailed requirements, API contract, architecture decisions; Part 3 (Sections 24–28) is the current SWE roadmap
+- [Frontend Plan](docs/frontend_plan.md) — **read at the start of every frontend session**; the actionable React+Vite build plan, phase checklist, exact API shapes, and live status
 - Update files in docs folder after major milestones and major additions to the project
