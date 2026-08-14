@@ -1,11 +1,29 @@
-# Project Spec: Spotify Mood RecSys
+# Project Spec: Moodify
 
 **Author:** Nathan Nguyen  
 **Type:** Personal portfolio project  
-**Primary audience:** FAANG recruiters and ML engineering hiring managers  
-**Definition of done:** Live deployed URL on Render that anyone can hit  
-**Most important quality:** Code quality — clean, readable, well tested  
-**Claude Code usage:** Claude Code writes boilerplate, Nathan writes core logic  
+**Primary audience:** Software Engineering internship recruiters and hiring managers at startups — with consumer tech companies like Meta and TikTok as stretch targets. Not ML/DS roles.  
+**Definition of done:** A complete full-stack SWE product — React frontend, user accounts and auth, tested and CI/CD'd backend — live on Render, plus a system design write-up Nathan can defend in an interview.  
+**Most important quality:** Nathan's own understanding of every architectural decision. Working code that Nathan can't explain does not count as done.  
+**Claude's role on this project:** Teach the underlying SWE fundamentals while building — explain the *why* behind frontend, auth, and testing patterns, not just produce working code. Nathan dislikes "vibe coding" parts he doesn't understand.
+
+---
+
+## 0. Project Pivot — Read This First
+
+**The ML/recommendation core (retrieval + ranking pipeline, mood translation, A/B bucketing, Streamlit dashboard) is functionally done and is no longer the focus of this project.** Sections 1–23 below document that system and remain accurate as a technical reference, but they describe *already-built* work, not what to prioritize next.
+
+**Why the pivot:** Nathan is a Data Science major recruiting for Software Engineering internships, not ML/DS roles. He originally leaned toward an "ML" identity because he's good at math and it seemed like the obvious path — but his actual strengths point toward product/application engineering: well-scoped, correctness-driven problems, building things real users touch, and a preference for that over open-ended data cleaning and ML experimentation.
+
+**What "done" means now:** closing the specific SWE skill gaps this project doesn't yet demonstrate, in this order:
+
+1. **A real React frontend** — the product currently has an API and a Streamlit dashboard, not a real product UI.
+2. **User accounts and auth** (sessions/JWT) — saved history and feedback tied to real users, not just API keys.
+3. **Testing and CI/CD** — pytest unit + integration tests, GitHub Actions running tests on push and auto-deploying on merge.
+4. **A system design write-up** — architecture decisions and tradeoffs, written to be defended in a technical interview.
+5. **(Stretch) A real-time/concurrent feature** — a systems-engineering signal this project otherwise lacks.
+
+Detailed requirements for each are in **Part 3 (Sections 24–28)** at the end of this document. When Sections 1–23 conflict with the pivot (e.g. "Not in scope" listing OAuth, or Success Metrics framed around ML hiring managers), Part 3 and this section take precedence.
 
 ---
 
@@ -21,16 +39,16 @@ The system runs a live A/B experiment comparing two ranking strategies, logs eve
 
 **For users:** Existing music discovery tools require you to already know what you want. You can't tell Spotify "I want something for a late night drive feeling nostalgic" and get back music that actually fits that feeling. This system bridges natural language and audio features using an LLM.
 
-**For Nathan's career:** Demonstrates end-to-end ML engineering skills to FAANG hiring managers — specifically the retrieval → ranking pipeline, experiment infrastructure, LLM integration in production, and the ability to ship a real deployed system.
+**For Nathan's career:** Demonstrates end-to-end software engineering skills to SWE internship hiring managers — specifically a real frontend, authentication, tested and CI/CD'd backend, and the ability to reason about and defend architecture tradeoffs. The ML pipeline (retrieval → ranking, LLM integration) is the backdrop the SWE work is built on top of, not the pitch itself.
 
 ### Who is it for?
 
 | User | What they do with it |
 |---|---|
-| FAANG recruiters | View the live URL, read the README, assess engineering maturity |
-| ML engineering hiring managers | Evaluate architecture decisions, experiment design, code quality |
-| Nathan (builder) | Learn production ML engineering patterns by building them |
-| General users | Type a mood, get song recommendations, rate them |
+| SWE internship recruiters (startups, with Meta/TikTok as stretch) | View the live URL, read the README, assess product and engineering maturity |
+| SWE hiring managers | Evaluate frontend quality, auth design, test coverage, CI/CD setup, and whether Nathan can explain his own architecture |
+| Nathan (builder) | Close specific SWE skill gaps — frontend, auth, testing, CI/CD, systems design — by building them, not by having them built for him |
+| General users | Sign in, type a mood, get song recommendations, rate them, see their history |
 
 ### Jobs to be done
 
@@ -102,7 +120,9 @@ The system runs a live A/B experiment comparing two ranking strategies, logs eve
 | Error handling | ✅ Done | 400 for bad requests, 401 for missing auth, 404 for not found, 422 for validation, 429 for rate limit |
 | Strategy A ranker | ✅ Done | Cosine similarity baseline ranker operational |
 
-### v2 — experiment infrastructure
+### v2 — experiment infrastructure (backlog — not currently prioritized)
+
+The ML/recommendation core is considered functionally done. These items are technically incomplete but are **not being actively pursued** — see Section 0. They're left here as an accurate backlog, not a plan.
 
 | Feature | Status | Requirement |
 |---|---|---|
@@ -111,14 +131,16 @@ The system runs a live A/B experiment comparing two ranking strategies, logs eve
 | Feedback endpoint | ⬜ Not started | POST /feedback accepts log ID, track ID, and rating; stores in feedback table |
 | Experiment results | ⬜ Not started | GET /experiments/results returns per-strategy metrics and statistical significance flag |
 | Cold start handling | ⬜ Not started | System returns valid recommendations even when user has no prior request history |
-| Test suite | ⬜ Not started | 10+ pytest tests covering all endpoints, happy path and at least one error case per endpoint |
-| CI pipeline | ⬜ Not started | GitHub Actions runs full test suite on every push to main; failing tests block merge |
+
+**Test suite and CI pipeline are no longer "ML v2" items — they've moved to Part 3 (Section 26) as a top-level SWE priority**, scoped to the whole app (backend + frontend + auth), not just the recommendation endpoints.
 
 ### Later — polish and deployment
 
+**Note:** the Streamlit frontend below is being superseded, not extended. It stays live as the metrics/demo dashboard, but the product's real UI going forward is the React frontend in Part 3 (Section 24) — see Section 0.
+
 | Feature | Status | Requirement |
 |---|---|---|
-| Streamlit frontend | ✅ Done | Single-page demo (Moodify) with mood/track toggle, song cards with similarity bars and Claude explanations, hover-reveal Spotify links. Track mode uses a song-name search box → dropdown of matches → Find Music, backed by GET /search/tracks. Runs with `streamlit run frontend/app.py`. |
+| Streamlit frontend | ✅ Done (superseded as primary UI) | Single-page demo (Moodify) with mood/track toggle, song cards with similarity bars and Claude explanations, hover-reveal Spotify links. Track mode uses a song-name search box → dropdown of matches → Find Music, backed by GET /search/tracks. Runs with `streamlit run frontend/app.py`. Kept as an internal metrics dashboard going forward, not the product-facing UI. |
 | Track search / autocomplete | ✅ Done | GET /search/tracks matches a song name against track name or artist (ILIKE, popularity-ordered, top 10) so users pick their favorite song by name instead of pasting a Spotify ID |
 | Render deployment | 🟡 In progress | Repo prepped: render.yaml (API + Postgres), Dockerfile honors $PORT, database.py handles Render's postgres:// scheme, models/ artifacts committed, frontend reads API_BASE/API_KEY from secrets. Remaining: provision on Render, seed prod DB, set secrets, deploy frontend to Streamlit Cloud. See Section 21 runbook. |
 | Catalog stats | ⬜ Not started | GET /catalog/stats returns total track count and audio feature distributions |
@@ -128,12 +150,14 @@ The system runs a live A/B experiment comparing two ranking strategies, logs eve
 
 | Feature | Reason |
 |---|---|
-| Spotify user OAuth | Adds significant auth complexity with limited portfolio signal |
-| Streaming responses | Premature optimization for a portfolio project at this scale |
-| Mobile app | Streamlit frontend is sufficient for demo purposes |
-| Real-time model retraining | Models trained offline; online learning is out of scope |
+| Spotify user OAuth | Different from the app's own user auth (Section 25) — adds Spotify-side complexity with no SWE-signal benefit over building auth ourselves |
+| Mobile app | React web frontend is sufficient for demo purposes |
+| Real-time model retraining | Models trained offline; online learning is out of scope — the "real-time" stretch goal (Section 28) is about concurrency/systems engineering, not ML |
 | Payments or subscriptions | Not relevant to portfolio goals |
 | Multi-tenancy | Single-tenant system is sufficient |
+| Further ranking model work (Strategy B tuning, deeper A/B statistical infra) | ML core is considered done; not worth further investment now that the project's focus has shifted to SWE fundamentals |
+
+Note: streaming responses are no longer categorically out of scope — see the real-time stretch goal in Section 28.
 
 ---
 
@@ -396,14 +420,16 @@ The full project is not done until:
 
 ## 9. Success Metrics
 
-This is a portfolio project, so success is defined by career outcomes, not user metrics.
+This is a portfolio project for SWE internship recruiting, so success is defined by career outcomes and interview-defensibility, not user metrics or ML performance.
 
 | Metric | Target |
 |---|---|
-| Recruiter response rate | At least 1 interview request directly attributable to this project |
-| Time to explain in interview | Can walk through full architecture in under 10 minutes |
-| Demo reliability | Zero crashes during a live demo |
-| Code review readiness | Any senior engineer can read any file and understand it without asking questions |
+| Recruiter response rate | At least 1 SWE internship interview request directly attributable to this project |
+| Architecture defensibility | Nathan can confidently explain any decision — frontend, auth, testing, deployment — in a technical interview, not just the ML pieces |
+| Time to explain in interview | Can walk through full architecture, including the system design write-up, in under 10 minutes |
+| Demo reliability | Zero crashes during a live demo, including sign-in and saved-history flows |
+| Code review readiness | Any senior engineer can read any file — frontend or backend — and understand it without asking questions |
+| CI/CD health | Every push runs tests; every merge to main auto-deploys with no manual steps |
 | GitHub stars | 10+ stars within first month of publishing |
 
 ---
@@ -443,7 +469,7 @@ This is a portfolio project, so success is defined by career outcomes, not user 
 | DB driver | psycopg2-binary | 2.9.x | Standard sync PostgreSQL driver; psycopg3 not yet necessary at this scale |
 | ANN index | Annoy | 1.17.x | Built by Spotify for music similarity; memory-mapped (efficient on Render free tier); dead-simple API |
 | Ranking model — A | numpy (cosine similarity) | 1.26.x | No model needed; pure vector math; Strategy A is the baseline |
-| Ranking model — B | LightGBM | 4.3.x | Replaces sklearn GBR; 10-50x faster training; used in production ranking at Meta/TikTok/Google; sklearn-compatible API means near-zero migration cost |
+| Ranking model — B | LightGBM | 4.3.x | **NOT built / not in requirements.txt — ML v2 backlog.** Intended choice: replaces sklearn GBR; 10-50x faster training; used in production ranking at Meta/TikTok/Google; sklearn-compatible API means near-zero migration cost |
 | Model serialization | joblib | 1.4.x | Standard for sklearn-compatible models; LightGBM supports `joblib.dump()` |
 | LLM | Anthropic SDK | 0.28.x | `claude-sonnet-4-20250514`; structured JSON output; clean Python SDK |
 | Spotify client | spotipy | 2.23.x | Official Spotify Web API wrapper; handles OAuth client credentials flow |
@@ -455,7 +481,12 @@ This is a portfolio project, so success is defined by career outcomes, not user 
 | Testing | pytest | 8.x | Industry standard; fixture-based; integrates with httpx for async FastAPI testing |
 | HTTP test client | httpx | 0.27.x | Required for async FastAPI `TestClient`; same API as `requests` |
 | CI/CD | GitHub Actions | — | Native GitHub integration; YAML lives in `.github/workflows/`; 2,000 free minutes/month |
-| Frontend | Streamlit | 1.35.x | Python-only; 50-line demo app; sufficient for interview demos |
+| Frontend (legacy dashboard) | Streamlit | 1.35.x | Python-only; kept as an internal metrics/demo dashboard, no longer the product-facing UI |
+| Frontend (product UI) | React | 18.x | Real component-based UI — the primary SWE skill gap this project closes; see Section 24 |
+| Frontend tooling | Vite | 5.x | Fast dev server and build; standard modern React setup, simpler than CRA |
+| Frontend HTTP client | fetch / axios | — | Talks to the FastAPI backend; axios if interceptor-based auth token attachment is needed (Section 25) |
+| Auth — tokens | PyJWT | 2.8.x | Issues and verifies JWTs for session auth; see Section 25 for design and rationale |
+| Auth — password hashing | passlib[bcrypt] | 1.7.x | Salts and hashes user passwords before storage — never store plaintext |
 | Deployment | Render | — | Docker-native; free web service + PostgreSQL (90-day free then $7/mo); recruiter-friendly live URL |
 
 ---
@@ -503,11 +534,12 @@ main.py              ← route definitions, mounts all routers, calls Base.metad
   ├── recommender.py ← loads Annoy index, builds query vector, returns top-N candidate track IDs
   │     └── uses: annoy index (models/annoy_index.ann), database session
   │
-  ├── ranker.py      ← Strategy A (cosine similarity) and Strategy B (LightGBM); returns ranked list
-  │     └── uses: numpy (A), lightgbm model (models/ranker_b.pkl) (B)
+  ├── ranker.py      ← Strategy A (cosine similarity). Strategy B (LightGBM) NOT built.
+  │     └── uses: numpy (A). ranker_b.pkl does not exist yet.
   │
-  ├── experiment.py  ← deterministic A/B assignment by API key hash; metrics aggregation queries
-  │     └── uses: hashlib (assignment), SQLAlchemy (metrics)
+  ├── experiment.py  ← [PLANNED, NOT YET CREATED] deterministic A/B assignment + metrics.
+  │     └── Today: no such module. Group is hardcoded to "A" inline in main.py;
+  │         no metrics aggregation exists. This is the intended target design.
   │
   ├── mood.py        ← sends mood string to Claude, parses JSON response into audio feature dict
   │     └── uses: anthropic SDK
@@ -518,11 +550,23 @@ main.py              ← route definitions, mounts all routers, calls Base.metad
   ├── models.py      ← SQLAlchemy ORM table definitions (Track, RecommendationLog, Feedback, ApiKey)
   ├── schemas.py     ← Pydantic request and response models for all endpoints
   └── database.py    ← engine, SessionLocal, Base, get_db dependency
+
+  (also present: app/utils.py — currently an empty placeholder with no use.)
 ```
+
+> **Status note:** this diagram is the target component layout. As of now `experiment.py`
+> does not exist (A/B assignment is inlined and hardcoded to `"A"` in `main.py`), and
+> `ranker.py` implements Strategy A only. See Section 3 and Section 0 for why these are
+> intentional backlog items rather than active work.
 
 ---
 
 ## 14. Data Flow — Request Lifecycle
+
+> **Status note:** this is the intended lifecycle. Steps attributed to `experiment.py`
+> (group assignment, step 5) are not yet implemented as written — there is no `experiment.py`,
+> the group is hardcoded to `"A"` in `main.py`, and only Strategy A runs. Request logging
+> (step 9) *is* implemented, but inline in `main.py` rather than in a separate module.
 
 ### Flow A: POST /recommend/mood (primary flow, full detail)
 
@@ -1104,3 +1148,112 @@ All API errors return this shape — no exceptions:
 | Unhandled exception (catch-all) | 500 | "An unexpected error occurred" |
 
 The catch-all 500 handler must be registered in `main.py` using FastAPI's `@app.exception_handler(Exception)` — this ensures raw Python exceptions never reach the user as unformatted 500s.
+
+---
+
+---
+
+# Part 3: SWE Product Roadmap (Current Priority)
+
+**This is what's actually being worked on now.** Sections 1–23 describe the ML/recommendation core, which is done. This part describes the four things (plus one stretch) that turn Moodify from an ML demo into a resume/interview-defensible SWE product — see Section 0 for why.
+
+---
+
+## 24. React Frontend Architecture
+
+**Priority 1.** The product currently has an API and a Streamlit dashboard — not a real frontend. This is the single highest-leverage gap: "I built a data app in Streamlit" and "I built a React frontend against my own REST API" test completely different skills to a SWE interviewer.
+
+### Why React + Vite, not Next.js
+Next.js adds SSR, file-based routing, and server components — real skills, but a different layer than what's being tested for an intern-level SWE role. Plain React + Vite keeps the focus on component architecture, hooks, and client/server data flow. Next.js is a reasonable follow-up later, not a requirement now.
+
+### Why built-in state (useState/useContext), not Redux
+The app's state surface is small: current query, recommendation results, auth session, saved history. Redux here would be over-engineering. Knowing *when not* to reach for a state library is itself an interview-relevant signal.
+
+### Why plain fetch, not React Query (initially)
+Understand the manual loading/error/success state machine by hand before reaching for a library that hides it. Revisiting with React Query later, once the manual pattern is understood, is a reasonable stretch — it's also a common interview topic in its own right.
+
+### Routing
+`react-router` — needed once there's a login page, a results page, and a history page.
+
+### Pages / components
+- Login / sign up
+- Mood/track search (rebuild of the current Streamlit flow: SearchBar, SongCard list, ExplanationText)
+- Recommendation results (song title/artist, similarity score, Claude explanation, feedback buttons)
+- History page — past recommendations tied to the logged-in user (depends on Section 25)
+- Nav bar reflecting auth state
+
+**Definition of done:** React frontend fully replaces Streamlit as the product-facing entry point, deployed and calling the existing FastAPI endpoints plus the new auth endpoints. Nathan can explain the component structure, state flow, and at least one rendering/performance decision without notes.
+
+---
+
+## 25. Authentication & User Accounts
+
+**Priority 2.** Current auth is a single shared `X-API-Key` per API consumer — it identifies a *client*, not a *user*. There's no login, no session, no per-user history. Real user auth is a baseline expectation for any consumer product pitch.
+
+### Why JWT, not server-side sessions
+No additional infrastructure (e.g. Redis) is justified at this scale, and JWTs are the more commonly-asked-about pattern for a stateless API in interviews. Known tradeoff to be able to name: JWTs can't be revoked before expiry without an extra revocation list — acceptable here, and worth stating as a limitation in the system design write-up (Section 27).
+
+### Token design
+Access token (short-lived, e.g. 15 min) + refresh token (longer-lived, e.g. 7 days). Refresh token stored in an httpOnly cookie rather than localStorage, to reduce XSS exposure. Be able to explain why one token isn't enough, and why httpOnly cookie over localStorage.
+
+### Password storage
+Hashed with bcrypt via `passlib`. Never store or log plaintext passwords.
+
+### Schema changes
+- New `users` table: `id`, `email` (unique), `hashed_password`, `created_at`.
+- `recommendation_logs` and `feedback` gain a nullable `user_id` foreign key — nullable so the existing anonymous/API-key-only flow keeps working; logged-in requests attach the real user.
+
+### New endpoints
+`POST /auth/signup`, `POST /auth/login`, `POST /auth/refresh`, `GET /auth/me`, `GET /users/me/history`.
+
+### Why the existing `X-API-Key` auth isn't being replaced
+The API key models *which client/experiment group*; the JWT models *which human is logged in*. These answer different questions and are deliberately not merged — be able to explain that distinction rather than presenting it as leftover complexity.
+
+**Definition of done:** a user can sign up, log in, get recommendations while authenticated, view their own history, and log out. Nathan can explain the JWT/refresh-token flow, the hashing choice, and the httpOnly-cookie tradeoff without notes.
+
+---
+
+## 26. Testing & CI/CD
+
+**Priority 3.** A "production-grade" pitch with zero automated tests and no CI is not credible in a SWE interview. This closes that gap for the whole app — frontend and auth included, not just the recommendation endpoints.
+
+### Backend testing
+- **Unit tests:** schema validation, JWT encode/decode helpers, password hashing, the MD5-based A/B assignment function, `ranker_a` cosine similarity math.
+- **Integration tests** (httpx + FastAPI `TestClient`): full request/response cycles for `/auth/*`, `/recommend/track`, `/recommend/mood` — happy path plus at least one failure case per endpoint (matches the existing Definition of Done in Section 8). Anthropic and Spotify calls mocked — no real API calls in CI.
+
+### Frontend testing (stretch within this milestone, not blocking)
+A handful of component tests with Vitest + React Testing Library for the highest-value components (SearchBar, SongCard) — enough to demonstrate frontend testing literacy, not full coverage.
+
+### CI
+`.github/workflows/ci.yml` runs pytest on every push and PR to `main`, with a Postgres service container (as already scoped in Section 20), and fails the build on any test failure.
+
+### CD
+On merge to `main`, after CI passes, auto-deploy to Render. Render supports auto-deploy on push natively once connected to the GitHub repo — the "CD" work here is mostly configuration (enable auto-deploy, gate it with branch protection + required status checks), not custom deploy scripting. Important distinction to understand: a required status check is what actually *blocks* a bad merge — the Render config alone does not.
+
+**Definition of done:** `pytest tests/ -v` passes locally and in CI; GitHub Actions runs on every push; `main` is protected so failing CI blocks merge; merging to `main` triggers a live deploy with no manual steps.
+
+---
+
+## 27. System Design Write-Up
+
+**Priority 4.** This is the artifact most likely to get read in an interview loop or take-home review before any code does — proof Nathan can reason about tradeoffs, not just implement a spec someone else wrote.
+
+### Required content (`docs/SYSTEM_DESIGN.md`)
+- A one-paragraph system summary and request-flow diagram — the polished, interview-facing version of Section 14.
+- Explicit tradeoff statements, each in the form "we chose X over Y because Z, and the cost of that choice is W," covering at minimum: FastAPI vs Flask, Annoy vs FAISS, PostgreSQL vs SQLite, JWT vs server-side sessions, React+Vite vs Next.js, and synchronous request/response vs the real-time stretch feature (Section 28).
+- A scaling discussion: what breaks first at 100x traffic (the Annoy index is read-only and memory-mapped, so it scales fine; the Postgres and Render free tiers would not) and what the next step would be.
+- A "what I'd do differently" section naming at least 2–3 real limitations (JWT revocation, no Strategy B in production, single-region deployment) — naming real limitations is itself a strong interview signal.
+
+**Definition of done:** a single polished document Nathan can hand to an interviewer or read from live, written in his own words after Claude explains each tradeoff — consistent with the "Claude teaches, Nathan writes the core reasoning" pattern in Section 7.
+
+---
+
+## 28. Stretch — Real-Time / Concurrent Feature
+
+**Priority 5, sequenced after Sections 24–27, not in parallel.** Nothing in the current system is concurrent or real-time — every request is a synchronous request/response cycle. Systems/concurrency is a distinct signal from "I can build CRUD endpoints," and it's a common probe at consumer/social-product startups.
+
+Pick one, don't build all:
+
+- **Streamed recommendation explanations** — stream each of the 10 Claude explanations back to the client as it's generated (SSE or WebSocket) instead of waiting for the full batch. Directly revisits the existing "batch all 10 in one call" decision in `explainer.py` (Section 17) and produces a concrete streaming-vs-batching tradeoff story.
+- **Live experiment metrics** — push updated A/B metrics to the dashboard via WebSocket as feedback arrives, instead of polling `/experiments/results`.
+- **Concurrency under load (lower-scope option)** — load-test the API (`locust` or `hey`), then tune and document concurrency behavior (Uvicorn workers, async DB session handling), producing real numbers for the Section 27 scaling discussion instead of speculation.

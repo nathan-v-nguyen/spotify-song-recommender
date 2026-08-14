@@ -2,44 +2,57 @@
 
 ## Project Goals
 
-A production-grade music recommendation API that accepts a seed track or natural language mood description and returns 10 personalized song recommendations with explanations. Includes an A/B testing framework comparing two ranking strategies.
+Moodify is a full-stack music recommendation product. The ML/recommendation core is done: a FastAPI backend that accepts a seed track or natural language mood description and returns 10 personalized song recommendations with explanations, plus an A/B testing framework comparing two ranking strategies (MD5 bucketing, request logging, feedback collection, Streamlit metrics dashboard).
 
-**Primary audience:** FAANG recruiters and ML engineering hiring managers  
-**Definition of done:** Live deployed URL on Render  
-**Current milestone:** MVP — seed track recommendation and mood-based recommendation working end to end
+**That ML core is no longer the focus.** Nathan is a Data Science major recruiting for Software Engineering internships, not ML/DS roles. The project is now being turned into a complete SWE product by closing specific skill gaps, in priority order: (1) a real React frontend, (2) user accounts and auth (JWT/sessions) with saved history, (3) testing (pytest) and CI/CD (GitHub Actions), (4) a system design write-up, (5) stretch — a real-time/concurrent feature. Full detail: `docs/project_spec.md` Part 3 (Sections 24–28), and `docs/overview.md`.
+
+**Primary audience:** SWE internship recruiters and hiring managers at startups — Meta/TikTok-style consumer tech as stretch targets, not ML engineering hiring managers  
+**Definition of done:** A complete full-stack product — React frontend, auth, tested and CI/CD'd backend — live on Render, plus a defensible system design write-up  
+**Current milestone:** React frontend (Priority 1) — see Current Status and Next Steps below
+
+**How to help Nathan on this project:** prioritize teaching the underlying SWE fundamentals while building, not just producing working code. Explain the *why* behind frontend/auth/testing patterns as you go — Nathan dislikes "vibe coding" parts he doesn't understand and needs to be able to defend any architectural decision in a technical interview.
 
 ---
 
 ## Architecture Overview
 
-FastAPI backend + PostgreSQL database running in Docker. Annoy index for fast similarity search. Claude API for mood translation and explanation generation. Streamlit frontend for demo.
+FastAPI backend + PostgreSQL database running in Docker. Annoy index for fast similarity search. Claude API for mood translation and explanation generation. A React frontend (Priority 1, not yet started) will become the product-facing UI going forward; the existing Streamlit app is currently the only UI and is being repositioned as an internal metrics/demo dashboard.
 
 ```
 spotify-song-recommender/
 ├── app/
-│   ├── main.py              # FastAPI app, all routes
+│   ├── main.py              # FastAPI app, all routes (A/B group currently hardcoded to "A")
 │   ├── models.py            # SQLAlchemy table definitions
 │   ├── schemas.py           # Pydantic request/response models
 │   ├── database.py          # Engine, SessionLocal, Base, get_db
 │   ├── auth.py              # API key validation
 │   ├── limiter.py           # Rate limiting
 │   ├── recommender.py       # Retrieval logic (Annoy index)
-│   ├── ranker.py            # Strategy A and B ranking
-│   ├── experiment.py        # A/B assignment and metrics
+│   ├── ranker.py            # Strategy A ranking (cosine similarity); Strategy B not built
 │   ├── mood.py              # Claude mood → audio features
-│   └── explainer.py        # Claude explanation generation
+│   ├── explainer.py         # Claude explanation generation
+│   └── utils.py             # empty placeholder — no current use
 ├── scripts/
-│   ├── seed_catalog.py      # Populate tracks table from Spotify API
-│   └── build_index.py       # Build and save Annoy index
-├── models/                  # Saved Annoy index and ranker B model
-├── frontend/
-│   └── app.py               # Streamlit demo
-├── tests/
-├── .github/workflows/ci.yml
+│   ├── seed_catalog.py      # Populate tracks table from Kaggle CSV
+│   ├── build_index.py       # Build and save Annoy index
+│   ├── create_api_key.py    # Generate an API key and assign its A/B group
+│   └── test_recommender.py  # Manual smoke test for recommender.py (not a pytest test)
+├── models/                  # Committed: annoy_index.ann, scaler.pkl, track_id_map.json (ranker_b.pkl not built)
+├── data/                    # dataset.csv — Kaggle catalog for seed_catalog.py (gitignored, local-only)
+├── frontend/                # Streamlit dashboard (legacy, kept as internal metrics view — app.py)
+├── alembic/                 # Migration environment and versions
+├── tests/                   # pytest — test_health.py, test_recommend.py only; full suite is Priority 3
 ├── .env                     # Never commit
+├── alembic.ini
+├── render.yaml              # Render Blueprint (API + Postgres)
 ├── Dockerfile
 ├── docker-compose.yml
 └── requirements.txt
+
+Planned, not yet created (see Next Steps / ML v2 backlog below):
+  app/experiment.py          # A/B assignment + metrics — logic currently inlined in main.py, not extracted
+  frontend-react/            # React product UI — Priority 1, not yet scaffolded
+  .github/workflows/ci.yml   # GitHub Actions CI — Priority 3, not yet created
 ```
 
 ---
@@ -54,13 +67,15 @@ spotify-song-recommender/
 | Migrations | Alembic |
 | Database | PostgreSQL 15 (Docker) |
 | Similarity search | Annoy |
-| Ranking | numpy (Strategy A), LightGBM (Strategy B) |
+| Ranking | numpy (Strategy A); LightGBM Strategy B not built — deprioritized, see Current Status |
 | LLM | Anthropic SDK — claude-sonnet-4-20250514 |
 | Spotify client | spotipy |
 | Rate limiting | slowapi |
 | Testing | pytest + httpx |
 | CI | GitHub Actions |
-| Frontend | Streamlit |
+| Frontend (product UI) | React + Vite — Priority 1, not yet scaffolded |
+| Frontend (legacy dashboard) | Streamlit |
+| Auth | JWT (PyJWT) + passlib/bcrypt — Priority 2, not yet built |
 | Deployment | Render |
 
 ---
@@ -173,17 +188,29 @@ brew services stop postgresql@15
 - `app/explainer.py` — complete: batches all 10 tracks in one Claude call, returns list of explanation strings (null on failure).
 - `POST /recommend/mood` in `app/main.py` — complete: validates mood input, calls `mood.py` → `get_candidates` → `ranker_a` → `explainer.py`, returns `RecommendationResponse` with explanations.
 - `recommendation_logs` insert — complete: both `/recommend/track` and `/recommend/mood` write to `recommendation_logs` and return real `log_id`.
+- `frontend/app.py` (Streamlit, "Moodify") — complete: mood/track toggle, song cards with similarity bars and Claude explanations, hover-reveal Spotify links and A/B badges, `GET /search/tracks` autocomplete backing track search. Now the internal metrics/demo dashboard, not the product-facing UI going forward.
+- `GET /search/tracks` — complete: autocomplete on track name/artist, ILIKE + popularity order, top 10, no auth, 30 req/min.
+- Render deployment prep — complete (repo-side): `render.yaml` Blueprint, Dockerfile honors `$PORT`, `database.py` normalizes `postgres://`, `models/` artifacts committed. Remaining (manual): provision on Render, seed prod DB, set `ANTHROPIC_API_KEY`. Runbook in `docs/project_spec.md` Section 21.
+
+**ML v2 backlog (accurate gap, deliberately not prioritized — see Project Goals):**
+- `POST /feedback`, `GET /experiments/results` — not built
+- Strategy B (LightGBM ranker) — not built
+- A/B assignment — both endpoints hardcode `experiment_group="A"`; not wired to the API-key hash yet
 
 **In progress:**
 - Nothing
 
-**Next steps:**
-1. `frontend/app.py` — Streamlit demo: mood input, song cards with explanations, A/B badge, feedback buttons, live experiment sidebar
+**Next steps (current priority, in order — full detail in `docs/project_spec.md` Part 3):**
+1. React frontend — scaffold `frontend-react/` (Vite), rebuild the mood/track search + results flow as real components, replacing Streamlit as the product-facing UI
+2. Auth & user accounts — JWT access/refresh tokens, bcrypt password hashing, `users` table, `/auth/*` endpoints, `user_id` on `recommendation_logs`/`feedback`
+3. Testing + CI/CD — expand `tests/` beyond `test_health.py`/`test_recommend.py` to a full pytest suite (backend + auth), wire GitHub Actions to run on push and auto-deploy to Render on merge
+4. System design write-up — `docs/SYSTEM_DESIGN.md` covering architecture, explicit tradeoffs, scaling, and known limitations
+5. (Stretch) Real-time/concurrent feature — streamed explanations, live experiment metrics, or documented load/concurrency testing
 
 ---
 
 ## Documentation
 
 - [Overview](docs/overview.md) — full project context, career goals, background
-- [Project Spec](docs/PROJECT_SPEC.md) — detailed requirements, API contract, architecture decisions
+- [Project Spec](docs/project_spec.md) — detailed requirements, API contract, architecture decisions; Part 3 (Sections 24–28) is the current SWE roadmap
 - Update files in docs folder after major milestones and major additions to the project
