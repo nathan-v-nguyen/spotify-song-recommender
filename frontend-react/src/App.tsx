@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import Heading from "./components/Heading"
-import ModeToggle from "./components/ModeToggle"
+import ModeToggle, {type Mode} from "./components/ModeToggle"
 import SearchForm from "./components/SearchForm"
 import ResultsList from "./components/ResultsList"
 import SongCard, { type SongProps } from "./components/SongCard"
@@ -11,11 +12,12 @@ const fakeSongs: SongProps[] = [
 
 
 function App() {
+  const [mode, setMode] = useState<Mode>("mood");
   return (
     <>
       <Heading title={"Moodify"} />
-      <ModeToggle mode = {"track"} />
-      <SearchForm></SearchForm>
+      <ModeToggle mode = {mode} setMode={setMode} />
+      <SearchForm mode = {mode}></SearchForm>
       <ResultsList songs={fakeSongs}></ResultsList>
     </>
     
