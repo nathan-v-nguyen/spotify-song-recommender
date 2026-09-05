@@ -1163,6 +1163,10 @@ The catch-all 500 handler must be registered in `main.py` using FastAPI's `@app.
 
 **Priority 1.** The product currently has an API and a Streamlit dashboard — not a real frontend. This is the single highest-leverage gap: "I built a data app in Streamlit" and "I built a React frontend against my own REST API" test completely different skills to a SWE interviewer.
 
+> **Status note (current):** `frontend-react/` is scaffolded (Vite + React + TypeScript, CSS Modules for styling). Built so far, static-first then wired with state: `Heading`, `ModeToggle`, `SearchForm`, `SongCard`, `ResultsList`, composed in `App`. The mood/track flow works end-to-end — `mode` is lifted to `App` and passed down, `SearchForm` has a controlled `query` input, and `App`'s `handleSearch` calls the real `/recommend/mood` and `/recommend/track` endpoints and renders live results. This required adding `CORSMiddleware` to `app/main.py` (the browser's `OPTIONS` preflight was getting a 405 without it). Not yet done: `isLoading`/error state, the track-mode search-by-name flow (needs `GET /search/tracks` wired with a debounced `useEffect` — the first real use of `useEffect` in this codebase), input-clearing after submit, a styling pass, routing (`react-router`, needed once login/history pages exist per Section 25), and the login/results/history pages themselves.
+>
+> The current API-key auth is being called from the browser via a `VITE_API_KEY` env var, dev-only and gitignored — a known, explicitly temporary violation of "never expose API keys client-side" (Section 4 Security requirements), resolved once Section 25 (JWT auth) gives the frontend a per-user session token instead of a static shared key.
+
 ### Why React + Vite, not Next.js
 Next.js adds SSR, file-based routing, and server components — real skills, but a different layer than what's being tested for an intern-level SWE role. Plain React + Vite keeps the focus on component architecture, hooks, and client/server data flow. Next.js is a reasonable follow-up later, not a requirement now.
 

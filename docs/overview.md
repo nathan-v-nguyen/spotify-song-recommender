@@ -56,7 +56,7 @@ The ML pipeline above is the backdrop, not the pitch. The pitch, going forward, 
 | Layer | Tool | Purpose |
 |---|---|---|
 | Frontend (legacy) | Streamlit | Internal metrics/demo dashboard — no longer the product-facing UI |
-| Frontend (product) | React + Vite | Real product UI — current top priority, see Project Evolution above |
+| Frontend (product) | React + Vite + TypeScript | Real product UI — current top priority, in progress (mood flow working end-to-end); see Project Evolution above |
 | Auth | JWT (PyJWT) + passlib/bcrypt | User accounts, sessions, saved history — see project_spec.md Section 25 |
 | API framework | FastAPI | Main API layer |
 | Validation | Pydantic | Request/response schemas |

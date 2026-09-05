@@ -16,12 +16,12 @@ Moodify is a full-stack music recommendation product. The ML/recommendation core
 
 ## Architecture Overview
 
-FastAPI backend + PostgreSQL database running in Docker. Annoy index for fast similarity search. Claude API for mood translation and explanation generation. A React frontend (Priority 1, not yet started) will become the product-facing UI going forward; the existing Streamlit app is currently the only UI and is being repositioned as an internal metrics/demo dashboard.
+FastAPI backend + PostgreSQL database running in Docker. Annoy index for fast similarity search. Claude API for mood translation and explanation generation. A React + TypeScript frontend (Priority 1, in progress — scaffolded, mood flow working end-to-end) is replacing Streamlit as the product-facing UI; the Streamlit app is now repositioned as an internal metrics/demo dashboard.
 
 ```
 spotify-song-recommender/
 ├── app/
-│   ├── main.py              # FastAPI app, all routes (A/B group currently hardcoded to "A")
+│   ├── main.py              # FastAPI app, all routes (A/B group currently hardcoded to "A"); CORSMiddleware added for the Vite dev origin
 │   ├── models.py            # SQLAlchemy table definitions
 │   ├── schemas.py           # Pydantic request/response models
 │   ├── database.py          # Engine, SessionLocal, Base, get_db
@@ -40,6 +40,17 @@ spotify-song-recommender/
 ├── models/                  # Committed: annoy_index.ann, scaler.pkl, track_id_map.json (ranker_b.pkl not built)
 ├── data/                    # dataset.csv — Kaggle catalog for seed_catalog.py (gitignored, local-only)
 ├── frontend/                # Streamlit dashboard (legacy, kept as internal metrics view — app.py)
+├── frontend-react/          # React + TypeScript product UI (Vite, CSS Modules) — Priority 1, in progress
+│   ├── .env                 # VITE_API_KEY — dev-only, gitignored (see Current Status re: temporary auth gap)
+│   └── src/
+│       ├── App.tsx          # mode/songs state, handleSearch (calls backend), composes everything below
+│       ├── index.css        # global styles (CSS variables, reset)
+│       └── components/
+│           ├── Heading.tsx
+│           ├── ModeToggle.tsx (+ .module.css)
+│           ├── SearchForm.tsx (+ .module.css)
+│           ├── SongCard.tsx
+│           └── ResultsList.tsx
 ├── alembic/                 # Migration environment and versions
 ├── tests/                   # pytest — test_health.py, test_recommend.py only; full suite is Priority 3
 ├── .env                     # Never commit
@@ -51,7 +62,6 @@ spotify-song-recommender/
 
 Planned, not yet created (see Next Steps / ML v2 backlog below):
   app/experiment.py          # A/B assignment + metrics — logic currently inlined in main.py, not extracted
-  frontend-react/            # React product UI — Priority 1, not yet scaffolded
   .github/workflows/ci.yml   # GitHub Actions CI — Priority 3, not yet created
 ```
 
@@ -73,7 +83,7 @@ Planned, not yet created (see Next Steps / ML v2 backlog below):
 | Rate limiting | slowapi |
 | Testing | pytest + httpx |
 | CI | GitHub Actions |
-| Frontend (product UI) | React + Vite — Priority 1, not yet scaffolded |
+| Frontend (product UI) | React + Vite + TypeScript, CSS Modules — Priority 1, in progress |
 | Frontend (legacy dashboard) | Streamlit |
 | Auth | JWT (PyJWT) + passlib/bcrypt — Priority 2, not yet built |
 | Deployment | Render |
@@ -191,6 +201,14 @@ brew services stop postgresql@15
 - `frontend/app.py` (Streamlit, "Moodify") — complete: mood/track toggle, song cards with similarity bars and Claude explanations, hover-reveal Spotify links and A/B badges, `GET /search/tracks` autocomplete backing track search. Now the internal metrics/demo dashboard, not the product-facing UI going forward.
 - `GET /search/tracks` — complete: autocomplete on track name/artist, ILIKE + popularity order, top 10, no auth, 30 req/min.
 - Render deployment prep — complete (repo-side): `render.yaml` Blueprint, Dockerfile honors `$PORT`, `database.py` normalizes `postgres://`, `models/` artifacts committed. Remaining (manual): provision on Render, seed prod DB, set `ANTHROPIC_API_KEY`. Runbook in `docs/project_spec.md` Section 21.
+- `frontend-react/` — scaffolded with Vite + React + TypeScript; styling via CSS Modules (one `.module.css` per component, e.g. `ModeToggle.module.css`).
+- `Heading`, `ModeToggle`, `SearchForm`, `SongCard`, `ResultsList` — built and composed in `App.tsx`. Built static-first (hardcoded fake data, no state), then wired with real state per component below.
+- `mode` state (`"mood" | "track"`) — lives in `App` (lifted up, since both `ModeToggle` and `SearchForm` need it), passed down as a prop; `ModeToggle` calls `setMode` via a prop on click rather than owning any state itself.
+- `query` state — controlled input (`value` + `onChange`) local to `SearchForm`; `handleSubmit` calls `onSearch(mode, query)`, a callback passed down from `App` (named `handleSearch` there, per the `onX`/`handleX` naming convention).
+- Real API integration — `App.tsx`'s `handleSearch` is async: builds the correct endpoint (`/recommend/mood` vs `/recommend/track`) and body (`mood_string` vs `spotify_id`) from `mode`, fetches with the `X-API-Key` header, and updates `songs` state from the response's `recommendations` array. Verified working end-to-end — live recommendations render in `ResultsList`.
+- `app/main.py` — added `CORSMiddleware` (`allow_origins=["http://localhost:5173"]`) so the Vite dev server's requests aren't blocked; without it the browser's automatic `OPTIONS` preflight got a 405 (no OPTIONS route existed) and the real POST never ran.
+- `.gitignore` — added `frontend-react/node_modules/`.
+- **Known temporary gap:** the frontend currently authenticates to `/recommend/*` using a dev API key read from `frontend-react/.env` (`VITE_API_KEY`, gitignored). This is a real, called-out violation of the "never expose API keys client-side" rule above — acceptable only because this is local-only dev traffic. Resolved once Priority 2 (JWT auth) gives the frontend a per-user session token instead of a static shared key.
 
 **ML v2 backlog (accurate gap, deliberately not prioritized — see Project Goals):**
 - `POST /feedback`, `GET /experiments/results` — not built
@@ -198,11 +216,13 @@ brew services stop postgresql@15
 - A/B assignment — both endpoints hardcode `experiment_group="A"`; not wired to the API-key hash yet
 
 **In progress:**
-- Nothing
+- Frontend `isLoading`/`error` state — not yet added to `handleSearch`; no feedback shown during a request or on failure (a failed/slow request currently just looks like nothing happened).
+- Track-mode search — currently sends whatever's typed as a raw `spotify_id`, which isn't usable input for a real user (nobody knows a track's Spotify ID). Needs `GET /search/tracks` wired in with a debounced `useEffect` so users can search by song name — this will be the first legitimate use of `useEffect` in the frontend (the mood-flow fetch correctly does *not* use one, since it's triggered by form submission, not a value change to sync with).
+- Frontend styling — components are functional but only minimally styled; a full pass is deferred until both search flows work.
 
 **Next steps (current priority, in order — full detail in `docs/project_spec.md` Part 3):**
-1. React frontend — scaffold `frontend-react/` (Vite), rebuild the mood/track search + results flow as real components, replacing Streamlit as the product-facing UI
-2. Auth & user accounts — JWT access/refresh tokens, bcrypt password hashing, `users` table, `/auth/*` endpoints, `user_id` on `recommendation_logs`/`feedback`
+1. React frontend (in progress) — finish `isLoading`/error state, build the track-search autocomplete (`useEffect`, debounced), clear the input after submit, then a styling pass; after that, auth pages/history/routing depend on Priority 2 landing first
+2. Auth & user accounts — JWT access/refresh tokens, bcrypt password hashing, `users` table, `/auth/*` endpoints, `user_id` on `recommendation_logs`/`feedback` — also removes the temporary `VITE_API_KEY` gap noted above
 3. Testing + CI/CD — expand `tests/` beyond `test_health.py`/`test_recommend.py` to a full pytest suite (backend + auth), wire GitHub Actions to run on push and auto-deploy to Render on merge
 4. System design write-up — `docs/SYSTEM_DESIGN.md` covering architecture, explicit tradeoffs, scaling, and known limitations
 5. (Stretch) Real-time/concurrent feature — streamed explanations, live experiment metrics, or documented load/concurrency testing
