@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import styles from "./SearchForm.module.css"
-import { type Mode } from "./ModeToggle"
 
-type SearchFormProps = { mode: Mode, onSearch: (mode:Mode, query:string) => void };
+type SearchFormProps = { onSearch: (query:string) => void, error: string | null, isLoading: boolean };
 
-function SearchForm ({ mode, onSearch }: SearchFormProps){
+function SearchForm ({ onSearch, error, isLoading }: SearchFormProps){
   const [query, setQuery] = useState<string>("");
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    onSearch(mode, query);
+    onSearch(query);
+    setQuery("");
   }
 
   return (
@@ -19,7 +19,9 @@ function SearchForm ({ mode, onSearch }: SearchFormProps){
       <input type="text" placeholder="Describe how you're feeling or what you're doing..."
       value={query}
       onChange={(e) => setQuery(e.target.value)}/>
-      <button type="submit">Find Music</button>
+      {isLoading && <p>Loading...</p>}
+      <button type="submit" disabled={isLoading}>Find Music</button>
+      {error && <p>{error}</p>}
     </form>
   )
 }

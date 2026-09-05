@@ -14,25 +14,36 @@ const fakeSongs: SongProps[] = [
 function App() {
   const [mode, setMode] = useState<Mode>("mood");
   const [songs, setSongs] = useState<SongProps[]>(fakeSongs);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function handleSearch(mode:Mode, query:string) {
+  async function handleSearch(query:string) {
     const endpoint = mode === "mood" ? "mood" : "track";
     const url = `http://localhost:8000/recommend/${endpoint}`;
     const body = mode === "mood" ? { mood_string: query } : { spotify_id: query };
-    const response = await fetch(url, { method: "POST", headers: {"Content-Type": "application/json", "X-API-Key": import.meta.env.VITE_API_KEY,}, body:JSON.stringify(body)});
-    if (!response.ok) {
-      console.error("Search failed:", response.status);
-      return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(url, { method: "POST", headers: {"Content-Type": "application/json", "X-API-Key": import.meta.env.VITE_API_KEY,}, body:JSON.stringify(body)});
+      if (!response.ok) {
+        setError("Something went wrong. Try again.");
+        return;
+      }
+      const data = await response.json();
+      setSongs(data.recommendations);
+    } catch {
+      setError("Couldn't reach the server. Is it running?");
+    } finally {
+      setIsLoading(false);
     }
-    const data = await response.json();
-    setSongs(data.recommendations);
+    
   }
 
   return (
     <>
       <Heading title={"Moodify"} />
       <ModeToggle mode = {mode} setMode={setMode} />
-      <SearchForm mode = {mode} onSearch={handleSearch}></SearchForm>
+      <SearchForm onSearch={handleSearch} error={error} isLoading={isLoading}></SearchForm>
       <ResultsList songs={songs}></ResultsList>
     </>
     
