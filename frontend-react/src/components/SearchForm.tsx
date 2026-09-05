@@ -2,12 +2,14 @@ import { useState } from 'react';
 import styles from "./SearchForm.module.css"
 import { type Mode } from "./ModeToggle"
 
-function SearchForm ({ mode }: { mode: Mode }){
+type SearchFormProps = { mode: Mode, onSearch: (mode:Mode, query:string) => void };
+
+function SearchForm ({ mode, onSearch }: SearchFormProps){
   const [query, setQuery] = useState<string>("");
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    console.log(mode, query)
+    onSearch(mode, query);
   }
 
   return (
