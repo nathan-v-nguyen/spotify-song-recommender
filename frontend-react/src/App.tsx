@@ -43,7 +43,7 @@ function App() {
     <>
       <Heading title={"Moodify"} />
       <ModeToggle mode = {mode} setMode={setMode} />
-      <SearchForm onSearch={handleSearch} error={error} isLoading={isLoading}></SearchForm>
+      <SearchForm mode={mode} onSearch={handleSearch} error={error} isLoading={isLoading}></SearchForm>
       <ResultsList songs={songs}></ResultsList>
     </>
     
