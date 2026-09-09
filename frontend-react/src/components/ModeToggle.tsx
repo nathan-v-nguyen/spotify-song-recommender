@@ -1,18 +1,31 @@
-import styles from "./ModeToggle.module.css"
+import styles from './ModeToggle.module.css';
 
-export type Mode = "mood" | "track";
-type ModeToggleProps = {mode: Mode; setMode: (m: Mode) => void};
+export type Mode = 'mood' | 'track';
+type ModeToggleProps = { mode: Mode; setMode: (m: Mode) => void };
 
-function ModeToggle ({ mode, setMode}: ModeToggleProps) {
+const OPTIONS: { value: Mode; title: string; hint: string }[] = [
+  { value: 'mood', title: 'Mood', hint: 'describe a feeling' },
+  { value: 'track', title: 'Track', hint: 'name a song' },
+];
+
+function ModeToggle({ mode, setMode }: ModeToggleProps) {
   return (
-    <div>
-      <button className = {mode === "mood" ? styles.active : ""}
-      onClick={() => setMode("mood")}
-      >Mood</button>
-      <button className = {mode === "track" ? styles.active : ""}
-      onClick={() => setMode("track")}>Track</button>
+    <div className={styles.toggle} data-mode={mode} role="group" aria-label="Search mode">
+      <span className={styles.thumb} aria-hidden="true" />
+      {OPTIONS.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          aria-pressed={mode === option.value}
+          className={`${styles.option} ${mode === option.value ? styles.active : ''}`}
+          onClick={() => setMode(option.value)}
+        >
+          {option.title}
+          <span className={styles.label}>{option.hint}</span>
+        </button>
+      ))}
     </div>
   );
 }
 
-export default ModeToggle
+export default ModeToggle;

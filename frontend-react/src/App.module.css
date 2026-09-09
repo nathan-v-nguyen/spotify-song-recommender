@@ -1,0 +1,41 @@
+/* Page shell: the centred column, and the dark "console" that holds the controls. */
+
+.page {
+  position: relative; /* lifts the content above the fixed grain overlay */
+  z-index: 1;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: clamp(40px, 9vh, 88px) 20px 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* ModeToggle and SearchForm are separate components, so the box that visually
+   groups them belongs here — to whoever composes them — not inside either one. */
+.console {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+  background: var(--ink-panel);
+  border: 1px solid var(--ink-line);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 26px 50px -28px rgb(0 0 0 / 0.65),
+    inset 0 1px 0 rgb(255 255 255 / 0.04);
+  animation: consoleIn 0.6s var(--ease) 0.1s both;
+}
+
+@keyframes consoleIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (max-width: 560px) {
+  .console {
+    padding: 14px;
+  }
+}

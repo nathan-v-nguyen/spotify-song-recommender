@@ -209,6 +209,9 @@ brew services stop postgresql@15
 - `app/main.py` — added `CORSMiddleware` (`allow_origins=["http://localhost:5173"]`) so the Vite dev server's requests aren't blocked; without it the browser's automatic `OPTIONS` preflight got a 405 (no OPTIONS route existed) and the real POST never ran.
 - `.gitignore` — added `frontend-react/node_modules/`.
 - **Known temporary gap:** the frontend currently authenticates to `/recommend/*` using a dev API key read from `frontend-react/.env` (`VITE_API_KEY`, gitignored). This is a real, called-out violation of the "never expose API keys client-side" rule above — acceptable only because this is local-only dev traffic. Resolved once Priority 2 (JWT auth) gives the frontend a per-user session token instead of a static shared key.
+- `isLoading`/`error` state — added to `App`'s `handleSearch` (`setIsLoading`/`setError` around a `try/catch/finally`, with `error` reset at the start of every call so a stale message can't linger into a new attempt) and threaded down to `SearchForm` as props. `SearchForm` shows "Loading..." and disables the submit button while a request is in flight, and renders the error message inline.
+- Track-search autocomplete — `SearchForm` has a debounced `useEffect` (`[query, mode]` dependency array, 300ms `setTimeout` + `clearTimeout` cleanup) that calls `GET /search/tracks` while in track mode and renders a clickable suggestion dropdown. Selecting a suggestion sets the displayed text (`query`) and the actual `spotify_id` to submit (`selectedTrackId`) as two separate pieces of state, since what's shown to the user isn't what the API needs. `handleSubmit` validates before submitting in track mode — "Please choose from the dropdown" if suggestions exist but none was picked, "Song not found" if nothing matched. This is the first real use of `useEffect` in the project; the mood-flow submit fetch correctly still doesn't use one, since it's triggered by an event, not a changing value to sync with.
+- Input clearing — `SearchForm` resets `query` and `selectedTrackId` after a successful submit.
 
 **ML v2 backlog (accurate gap, deliberately not prioritized — see Project Goals):**
 - `POST /feedback`, `GET /experiments/results` — not built
@@ -216,12 +219,10 @@ brew services stop postgresql@15
 - A/B assignment — both endpoints hardcode `experiment_group="A"`; not wired to the API-key hash yet
 
 **In progress:**
-- Frontend `isLoading`/`error` state — not yet added to `handleSearch`; no feedback shown during a request or on failure (a failed/slow request currently just looks like nothing happened).
-- Track-mode search — currently sends whatever's typed as a raw `spotify_id`, which isn't usable input for a real user (nobody knows a track's Spotify ID). Needs `GET /search/tracks` wired in with a debounced `useEffect` so users can search by song name — this will be the first legitimate use of `useEffect` in the frontend (the mood-flow fetch correctly does *not* use one, since it's triggered by form submission, not a value change to sync with).
-- Frontend styling — components are functional but only minimally styled; a full pass is deferred until both search flows work.
+- Frontend styling — components are functional but only minimally styled (e.g. `SearchForm`'s placeholder text doesn't yet change between mood/track mode); a full pass is deferred until now that both search flows work end to end.
 
 **Next steps (current priority, in order — full detail in `docs/project_spec.md` Part 3):**
-1. React frontend (in progress) — finish `isLoading`/error state, build the track-search autocomplete (`useEffect`, debounced), clear the input after submit, then a styling pass; after that, auth pages/history/routing depend on Priority 2 landing first
+1. React frontend (in progress) — mood and track-search flows both working end-to-end with loading/error/validation states; remaining: a full styling pass; after that, auth pages/history/routing depend on Priority 2 landing first
 2. Auth & user accounts — JWT access/refresh tokens, bcrypt password hashing, `users` table, `/auth/*` endpoints, `user_id` on `recommendation_logs`/`feedback` — also removes the temporary `VITE_API_KEY` gap noted above
 3. Testing + CI/CD — expand `tests/` beyond `test_health.py`/`test_recommend.py` to a full pytest suite (backend + auth), wire GitHub Actions to run on push and auto-deploy to Render on merge
 4. System design write-up — `docs/SYSTEM_DESIGN.md` covering architecture, explicit tradeoffs, scaling, and known limitations

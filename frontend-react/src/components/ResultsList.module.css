@@ -1,0 +1,104 @@
+/* The results sleeve: section header, tracklist panel, loading and empty states. */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgb(244 241 230 / 0.72);
+}
+
+.meta {
+  letter-spacing: 0.16em;
+  color: rgb(244 241 230 / 0.5);
+}
+
+.panel {
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--ink-panel);
+  border: 1px solid var(--ink-line);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 26px 50px -28px rgb(0 0 0 / 0.65);
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+
+.empty {
+  padding: 46px 24px;
+  text-align: center;
+  border: 1px dashed rgb(244 241 230 / 0.28);
+  border-radius: var(--radius-lg);
+  color: rgb(244 241 230 / 0.72);
+}
+
+.emptyTitle {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-variation-settings: 'opsz' 60, 'SOFT' 20, 'WONK' 1;
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--cream);
+}
+
+.emptyBody {
+  margin: 0;
+  font-size: 13.5px;
+}
+
+/* ── Loading skeleton ────────────────────────────────────────────────────── */
+
+/* Placeholder rows that match the real row's rhythm, so the layout doesn't jump
+   when the data lands. */
+.skeletonRow {
+  display: grid;
+  grid-template-columns: 2.6rem 1fr;
+  gap: 10px 14px;
+  padding: 16px 18px;
+}
+
+.skeletonRow + .skeletonRow {
+  border-top: 1px solid var(--ink-line);
+}
+
+.bar {
+  height: 11px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--ink-raised), #2b312b, var(--ink-raised));
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+  animation-delay: calc(var(--i) * 90ms);
+}
+
+.barRank {
+  width: 1.4rem;
+  grid-row: 1 / -1;
+}
+
+.barTitle {
+  width: 56%;
+}
+
+.barMeter {
+  width: 100%;
+  height: 5px;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}

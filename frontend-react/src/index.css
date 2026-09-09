@@ -1,27 +1,113 @@
+/* Design tokens, global reset, and the page ground shared by every component. */
+
 :root {
-  --color-bg: #1a1a1a;
-  --color-surface: #262626;
-  --color-text: #f5f5f5;
-  --color-text-muted: #a3a3a3;
-  --color-accent: #1db954;
-  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Ground — the sage "sleeve stock" the whole product is printed on. */
+  --sage: #6b8f71;
+  --sage-lift: #7ea486;
+  --sage-deep: #3f5a48;
+
+  /* Ink — the dark label panels that sit on top of the sleeve. */
+  --ink: #0f120f;
+  --ink-panel: #161a16;
+  --ink-raised: #1e231e;
+  --ink-line: #2c332c;
+
+  /* Type colours, warm rather than pure white so they read as printed. */
+  --cream: #f4f1e6;
+  --cream-dim: #b4bbaf;
+  --cream-faint: #7b847a;
+
+  /* One accent, used only where something is a signal. */
+  --green: #1db954;
+  --green-lit: #35e27a;
+  --green-shade: #072a12;
+  --red: #ff6b5e;
+
+  --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --font-body: 'Karla', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
   --radius: 8px;
+  --radius-lg: 16px;
+  --measure: 720px;
+
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  color-scheme: dark;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
   margin: 0;
-  font-family: var(--font-sans);
-  background: var(--color-bg);
-  color: var(--color-text);
+  min-height: 100vh;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--cream);
+  background-color: var(--sage);
+  /* Two soft radials instead of a flat fill: light pools at the top where the
+     wordmark sits, and the page settles into shadow at the bottom. */
+  background-image:
+    radial-gradient(120% 70% at 50% -10%, var(--sage-lift) 0%, transparent 62%),
+    radial-gradient(110% 90% at 50% 115%, var(--sage-deep) 0%, transparent 58%);
+  background-attachment: fixed;
+}
+
+/* Film grain. An SVG turbulence filter as a data URI — no image request, and
+   `overlay` blending keeps it visible on the sage without muddying the panels. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.14;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 button {
   font-family: inherit;
+  font-size: inherit;
   cursor: pointer;
   border: none;
   background: none;
+  color: inherit;
+}
+
+input {
+  font-family: inherit;
+}
+
+/* One focus treatment for the whole app. :focus-visible fires for keyboard
+   users but not for mouse clicks, so this is accessible without being noisy. */
+:focus-visible {
+  outline: 2px solid var(--green-lit);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+::selection {
+  background: var(--green);
+  color: var(--green-shade);
+}
+
+/* Respect the OS "reduce motion" setting: keep the layout, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
