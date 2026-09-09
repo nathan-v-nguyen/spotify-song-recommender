@@ -1,0 +1,204 @@
+/* Search field, autocomplete dropdown, and the inline status line. */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Positioning context for the absolutely-placed dropdown. */
+.fieldWrap {
+  position: relative;
+}
+
+/* One pill that contains the input and the submit button, so the whole thing
+   lights up as a single control when anything inside it takes focus. */
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 5px 5px 20px;
+  background: var(--ink);
+  border: 1px solid var(--ink-line);
+  border-radius: 999px;
+  transition:
+    border-color 0.2s var(--ease),
+    box-shadow 0.2s var(--ease);
+}
+
+.field:hover {
+  border-color: #3a423a;
+}
+
+.field:focus-within {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgb(29 185 84 / 0.16);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 0;
+  border: none;
+  outline: none;
+  background: none;
+  color: var(--cream);
+  font-size: 15px;
+  caret-color: var(--green);
+}
+
+.input::placeholder {
+  color: var(--cream-faint);
+}
+
+.submit {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: var(--green);
+  color: var(--green-shade);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition:
+    background 0.2s var(--ease),
+    transform 0.12s var(--ease);
+}
+
+.submit:hover:not(:disabled) {
+  background: var(--green-lit);
+}
+
+.submit:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.submit:disabled {
+  background: var(--ink-raised);
+  color: var(--cream-faint);
+  cursor: not-allowed;
+}
+
+.spinner {
+  width: 11px;
+  height: 11px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* ── Autocomplete dropdown ───────────────────────────────────────────────── */
+
+.suggestions {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  max-height: 288px;
+  overflow-y: auto;
+  background: var(--ink-raised);
+  border: 1px solid var(--ink-line);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 26px 50px -18px rgb(0 0 0 / 0.7);
+  animation: dropIn 0.18s var(--ease);
+}
+
+@keyframes dropIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* A real <button> rather than a clickable <li>, so the list is reachable and
+   operable from the keyboard instead of mouse-only. */
+.suggestion {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius);
+  text-align: left;
+  line-height: 1.35;
+  transition: background 0.15s var(--ease);
+}
+
+.suggestion:hover,
+.suggestion:focus-visible {
+  background: rgb(29 185 84 / 0.13);
+}
+
+.suggestionName {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cream);
+}
+
+.suggestionArtist {
+  display: block;
+  font-size: 12px;
+  color: var(--cream-faint);
+}
+
+/* ── Status line ─────────────────────────────────────────────────────────── */
+
+/* Reserved height so an appearing message doesn't shove the results down. */
+.status {
+  min-height: 18px;
+  padding: 0 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.hint {
+  color: var(--cream-faint);
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--red);
+}
+
+.error::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+@media (max-width: 560px) {
+  .field {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    padding: 6px;
+    border-radius: var(--radius-lg);
+  }
+
+  .input {
+    padding: 12px 14px;
+  }
+
+  .submit {
+    justify-content: center;
+  }
+}

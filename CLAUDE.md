@@ -8,7 +8,7 @@ Moodify is a full-stack music recommendation product. The ML/recommendation core
 
 **Primary audience:** SWE internship recruiters and hiring managers at startups — Meta/TikTok-style consumer tech as stretch targets, not ML engineering hiring managers  
 **Definition of done:** A complete full-stack product — React frontend, auth, tested and CI/CD'd backend — live on Render, plus a defensible system design write-up  
-**Current milestone:** React frontend (Priority 1) — see Current Status and Next Steps below
+**Current milestone:** React frontend (Priority 1) — pre-auth scope complete (both search flows + full styling pass); the rest of the frontend is blocked on Priority 2. See Current Status and Next Steps below
 
 **How to help Nathan on this project:** prioritize teaching the underlying SWE fundamentals while building, not just producing working code. Explain the *why* behind frontend/auth/testing patterns as you go — Nathan dislikes "vibe coding" parts he doesn't understand and needs to be able to defend any architectural decision in a technical interview.
 
@@ -16,12 +16,12 @@ Moodify is a full-stack music recommendation product. The ML/recommendation core
 
 ## Architecture Overview
 
-FastAPI backend + PostgreSQL database running in Docker. Annoy index for fast similarity search. Claude API for mood translation and explanation generation. A React frontend (Priority 1, not yet started) will become the product-facing UI going forward; the existing Streamlit app is currently the only UI and is being repositioned as an internal metrics/demo dashboard.
+FastAPI backend + PostgreSQL database running in Docker. Annoy index for fast similarity search. Claude API for mood translation and explanation generation. A React + TypeScript frontend (Priority 1 — both search flows working end-to-end and fully styled; auth-dependent pages still to come) is replacing Streamlit as the product-facing UI; the Streamlit app is now repositioned as an internal metrics/demo dashboard.
 
 ```
 spotify-song-recommender/
 ├── app/
-│   ├── main.py              # FastAPI app, all routes (A/B group currently hardcoded to "A")
+│   ├── main.py              # FastAPI app, all routes (A/B group currently hardcoded to "A"); CORSMiddleware added for the Vite dev origin
 │   ├── models.py            # SQLAlchemy table definitions
 │   ├── schemas.py           # Pydantic request/response models
 │   ├── database.py          # Engine, SessionLocal, Base, get_db
@@ -40,6 +40,20 @@ spotify-song-recommender/
 ├── models/                  # Committed: annoy_index.ann, scaler.pkl, track_id_map.json (ranker_b.pkl not built)
 ├── data/                    # dataset.csv — Kaggle catalog for seed_catalog.py (gitignored, local-only)
 ├── frontend/                # Streamlit dashboard (legacy, kept as internal metrics view — app.py)
+├── frontend-react/          # React + TypeScript product UI (Vite, CSS Modules) — Priority 1, pre-auth scope done
+│   ├── .env                 # VITE_API_KEY — dev-only, gitignored (see Current Status re: temporary auth gap)
+│   ├── index.html           # Google Fonts <link> (Fraunces / Karla / JetBrains Mono), page title, meta
+│   ├── public/favicon.svg   # custom mark (dark tile, sage record rings, green spindle)
+│   └── src/
+│       ├── App.tsx          # mode/songs/strategy/hasSearched/isLoading/error state, handleSearch, composes everything below
+│       ├── App.module.css   # page shell + the dark "console" panel that groups the controls
+│       ├── index.css        # design tokens (colour/type/motion), reset, sage page ground + grain overlay
+│       └── components/      # every component has a matching .module.css
+│           ├── Heading.tsx
+│           ├── ModeToggle.tsx
+│           ├── SearchForm.tsx
+│           ├── SongCard.tsx
+│           └── ResultsList.tsx
 ├── alembic/                 # Migration environment and versions
 ├── tests/                   # pytest — test_health.py, test_recommend.py only; full suite is Priority 3
 ├── .env                     # Never commit
@@ -51,7 +65,6 @@ spotify-song-recommender/
 
 Planned, not yet created (see Next Steps / ML v2 backlog below):
   app/experiment.py          # A/B assignment + metrics — logic currently inlined in main.py, not extracted
-  frontend-react/            # React product UI — Priority 1, not yet scaffolded
   .github/workflows/ci.yml   # GitHub Actions CI — Priority 3, not yet created
 ```
 
@@ -73,7 +86,7 @@ Planned, not yet created (see Next Steps / ML v2 backlog below):
 | Rate limiting | slowapi |
 | Testing | pytest + httpx |
 | CI | GitHub Actions |
-| Frontend (product UI) | React + Vite — Priority 1, not yet scaffolded |
+| Frontend (product UI) | React + Vite + TypeScript, CSS Modules — Priority 1, pre-auth scope done |
 | Frontend (legacy dashboard) | Streamlit |
 | Auth | JWT (PyJWT) + passlib/bcrypt — Priority 2, not yet built |
 | Deployment | Render |
@@ -91,6 +104,15 @@ Planned, not yet created (see Next Steps / ML v2 backlog below):
 - No hardcoded secrets — all from environment variables via `python-dotenv`
 - All API errors return consistent JSON: `{"error": "message", "code": 422}`
 - No commented-out code committed to main
+
+**Frontend styling conventions (`frontend-react/`):**
+- One `.module.css` per component, colocated. No global class names except the design tokens in `index.css`.
+- Never hardcode a colour, font, radius, or easing curve in a component stylesheet — use the `:root` custom properties from `index.css` (`--sage`, `--ink-panel`, `--cream`, `--green`, `--font-display`, `--radius`, `--ease`, …).
+- Green (`--green`) is the only accent and means *signal* — active state, similarity, primary action, external link. Don't spend it on decoration.
+- Layout that positions siblings belongs to the parent that composes them, not inside the children.
+- Animate `transform`/`opacity`, not `width`/`height`/`top`. Pass per-item values (index, percentage) into CSS as custom properties and keep the animation itself in the stylesheet.
+- Every interactive element must be a real `<button>`/`<a>` and reachable by keyboard; rely on the global `:focus-visible` ring rather than removing outlines.
+- Every animation must be covered by the `prefers-reduced-motion` block in `index.css`.
 
 **API patterns:**
 - Auth header: `X-API-Key`
@@ -191,6 +213,30 @@ brew services stop postgresql@15
 - `frontend/app.py` (Streamlit, "Moodify") — complete: mood/track toggle, song cards with similarity bars and Claude explanations, hover-reveal Spotify links and A/B badges, `GET /search/tracks` autocomplete backing track search. Now the internal metrics/demo dashboard, not the product-facing UI going forward.
 - `GET /search/tracks` — complete: autocomplete on track name/artist, ILIKE + popularity order, top 10, no auth, 30 req/min.
 - Render deployment prep — complete (repo-side): `render.yaml` Blueprint, Dockerfile honors `$PORT`, `database.py` normalizes `postgres://`, `models/` artifacts committed. Remaining (manual): provision on Render, seed prod DB, set `ANTHROPIC_API_KEY`. Runbook in `docs/project_spec.md` Section 21.
+- `frontend-react/` — scaffolded with Vite + React + TypeScript; styling via CSS Modules (one `.module.css` per component, e.g. `ModeToggle.module.css`).
+- `Heading`, `ModeToggle`, `SearchForm`, `SongCard`, `ResultsList` — built and composed in `App.tsx`. Built static-first (hardcoded fake data, no state), then wired with real state per component below.
+- `mode` state (`"mood" | "track"`) — lives in `App` (lifted up, since both `ModeToggle` and `SearchForm` need it), passed down as a prop; `ModeToggle` calls `setMode` via a prop on click rather than owning any state itself.
+- `query` state — controlled input (`value` + `onChange`) local to `SearchForm`; `handleSubmit` calls `onSearch(mode, query)`, a callback passed down from `App` (named `handleSearch` there, per the `onX`/`handleX` naming convention).
+- Real API integration — `App.tsx`'s `handleSearch` is async: builds the correct endpoint (`/recommend/mood` vs `/recommend/track`) and body (`mood_string` vs `spotify_id`) from `mode`, fetches with the `X-API-Key` header, and updates `songs` state from the response's `recommendations` array. Verified working end-to-end — live recommendations render in `ResultsList`.
+- `app/main.py` — added `CORSMiddleware` (`allow_origins=["http://localhost:5173"]`) so the Vite dev server's requests aren't blocked; without it the browser's automatic `OPTIONS` preflight got a 405 (no OPTIONS route existed) and the real POST never ran.
+- `.gitignore` — added `frontend-react/node_modules/`.
+- **Known temporary gap:** the frontend currently authenticates to `/recommend/*` using a dev API key read from `frontend-react/.env` (`VITE_API_KEY`, gitignored). This is a real, called-out violation of the "never expose API keys client-side" rule above — acceptable only because this is local-only dev traffic. Resolved once Priority 2 (JWT auth) gives the frontend a per-user session token instead of a static shared key.
+- `isLoading`/`error` state — added to `App`'s `handleSearch` (`setIsLoading`/`setError` around a `try/catch/finally`, with `error` reset at the start of every call so a stale message can't linger into a new attempt) and threaded down to `SearchForm` as props. `SearchForm` shows "Loading..." and disables the submit button while a request is in flight, and renders the error message inline.
+- Track-search autocomplete — `SearchForm` has a debounced `useEffect` (`[query, mode]` dependency array, 300ms `setTimeout` + `clearTimeout` cleanup) that calls `GET /search/tracks` while in track mode and renders a clickable suggestion dropdown. Selecting a suggestion sets the displayed text (`query`) and the actual `spotify_id` to submit (`selectedTrackId`) as two separate pieces of state, since what's shown to the user isn't what the API needs. `handleSubmit` validates before submitting in track mode — "Please choose from the dropdown" if suggestions exist but none was picked, "Song not found" if nothing matched. This is the first real use of `useEffect` in the project; the mood-flow submit fetch correctly still doesn't use one, since it's triggered by an event, not a changing value to sync with.
+- Input clearing — `SearchForm` resets `query` and `selectedTrackId` after a successful submit.
+- **Full styling pass — complete.** Design direction: a record sleeve. Sage-green "sleeve stock" page ground (carried over from the Streamlit build) with dark ink panels printed on top and Spotify green as the single accent, reserved for signal (active mode, meter fill, submit, Spotify link). Typography is Fraunces (variable display serif, `opsz`/`SOFT`/`WONK` axes) for the wordmark and track titles, Karla for body, JetBrains Mono for numerics and kickers — loaded via a `<link>` with `preconnect` in `index.html` rather than a CSS `@import`, so the font request starts during parse instead of waiting on the stylesheet.
+- Design tokens — all colour, type, radius, and easing values live as CSS custom properties on `:root` in `index.css`; no component hardcodes a colour. This is what makes a future theme swap (or a dark/light toggle) a one-file change.
+- Page ground — sage base plus two `radial-gradient`s for depth, and a fixed film-grain overlay drawn by an inline SVG `feTurbulence` data URI (`body::before`, `mix-blend-mode: overlay`) — texture with zero extra network requests.
+- Layout ownership — `App.module.css` owns the page column and the `.console` panel that visually groups `ModeToggle` + `SearchForm`. The grouping box lives in `App` (the composer) rather than inside either child, so neither component assumes anything about what it's rendered next to.
+- `ModeToggle` — segmented control with a pill "thumb" that slides between the two options. Driven entirely by CSS: the container carries `data-mode={mode}` and the stylesheet does `transform: translateX(100%)` on the thumb, so there's no measuring DOM nodes in JS. Buttons carry `aria-pressed`.
+- `SearchForm` — input and submit share one pill "field" that lights up together via `:focus-within`; placeholder and helper text now switch per mode; the submit button shows an inline spinner and reads "Finding" while a request is in flight. Autocomplete rows are real `<button>`s inside the `<li>`s (previously an `onClick` on the `<li>`, which was mouse-only and unreachable by keyboard). The status line has a reserved `min-height` so an appearing error doesn't shove the results down.
+- `SongCard` — rebuilt as a numbered tracklist row (mono rank, Fraunces title, artist, similarity meter, Claude explanation as an italic liner note). Album + "Open in Spotify" reveal on hover/focus using `grid-template-rows: 0fr → 1fr`, which animates to the content's natural height — no guessed `max-height` to overflow, unlike the Streamlit version. The meter animates with `transform: scaleX()` rather than `width`, so it stays on the compositor instead of forcing layout every frame.
+- Staggered entrance — `ResultsList` passes each row's index down as a CSS custom property (`--i`), and the stylesheet computes `animation-delay: calc(var(--i) * 45ms)`. The animation stays entirely in CSS; React only supplies the index.
+- `ResultsList` — gained a section header (`TRACKLIST` + track count + strategy), a shimmer skeleton for the loading state that matches the real row rhythm so the layout doesn't jump, and two distinct empty states ("your tracklist is empty" before any search vs. "nothing came back" after one). `App` now tracks `strategy` and `hasSearched` to support these; the hardcoded `fakeSongs` seed data was removed so a fresh page shows the real empty state.
+- Accessibility/motion — one global `:focus-visible` ring (keyboard-only, not on mouse click), `role="meter"` with `aria-valuenow` on the similarity bar, and a `prefers-reduced-motion` block that drops all animation while keeping layout intact.
+- Two behaviour fixes made during the pass (both pre-existing, both in `SearchForm`): (a) editing the input after picking a suggestion now clears `selectedTrackId`, which previously left the form submitting the *old* track's `spotify_id` while displaying different text; (b) the debounced effect no longer calls `setSuggestions` in its body — dropdown visibility is derived at render time (`showSuggestions`) instead. That removed a cascading re-render (flagged by `eslint-plugin-react-hooks`' `set-state-in-effect`, which was failing `npm run lint`) and also stopped the dropdown from reopening 300ms after every selection.
+- Dead code removed — `src/App.css` (unused Vite scaffold boilerplate, never imported).
+- Verified: `npm run build` (tsc + vite) and `npm run lint` both pass clean.
 
 **ML v2 backlog (accurate gap, deliberately not prioritized — see Project Goals):**
 - `POST /feedback`, `GET /experiments/results` — not built
@@ -198,11 +244,12 @@ brew services stop postgresql@15
 - A/B assignment — both endpoints hardcode `experiment_group="A"`; not wired to the API-key hash yet
 
 **In progress:**
-- Nothing
+- Nothing actively in progress on Priority 1. The React frontend is feature- and styling-complete for the pre-auth scope; the remaining frontend work (routing, login/signup, history page, nav reflecting auth state) is blocked on Priority 2 landing first.
+- Not yet visually reviewed in a browser by Nathan — the styling pass is verified by a clean `tsc`/`vite build`/`eslint` run, not by a screenshot.
 
 **Next steps (current priority, in order — full detail in `docs/project_spec.md` Part 3):**
-1. React frontend — scaffold `frontend-react/` (Vite), rebuild the mood/track search + results flow as real components, replacing Streamlit as the product-facing UI
-2. Auth & user accounts — JWT access/refresh tokens, bcrypt password hashing, `users` table, `/auth/*` endpoints, `user_id` on `recommendation_logs`/`feedback`
+1. React frontend — **pre-auth scope complete**: mood and track-search flows both working end-to-end with loading/error/validation states, plus a full styling pass (record-sleeve design system, see Current Status). Remaining frontend work — `react-router`, login/signup pages, history page, nav reflecting auth state — depends on Priority 2 landing first
+2. Auth & user accounts — JWT access/refresh tokens, bcrypt password hashing, `users` table, `/auth/*` endpoints, `user_id` on `recommendation_logs`/`feedback` — also removes the temporary `VITE_API_KEY` gap noted above
 3. Testing + CI/CD — expand `tests/` beyond `test_health.py`/`test_recommend.py` to a full pytest suite (backend + auth), wire GitHub Actions to run on push and auto-deploy to Render on merge
 4. System design write-up — `docs/SYSTEM_DESIGN.md` covering architecture, explicit tradeoffs, scaling, and known limitations
 5. (Stretch) Real-time/concurrent feature — streamed explanations, live experiment metrics, or documented load/concurrency testing

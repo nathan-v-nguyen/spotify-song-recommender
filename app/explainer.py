@@ -21,7 +21,7 @@ def explain_recommendations(mood_string: str, tracks: list[Track]) -> list[str |
     """Generates one-sentence explanations for recommended tracks using Claude."""
     try:
         message = client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-sonnet-4-20250514",
             max_tokens=1024,
             system=(
                 "You are a music recommendation explainer. You will receive a mood description "

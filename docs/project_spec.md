@@ -1163,6 +1163,16 @@ The catch-all 500 handler must be registered in `main.py` using FastAPI's `@app.
 
 **Priority 1.** The product currently has an API and a Streamlit dashboard — not a real frontend. This is the single highest-leverage gap: "I built a data app in Streamlit" and "I built a React frontend against my own REST API" test completely different skills to a SWE interviewer.
 
+> **Status note (current):** `frontend-react/` is built, wired, and styled (Vite + React + TypeScript, CSS Modules). Components: `Heading`, `ModeToggle`, `SearchForm`, `SongCard`, `ResultsList`, composed in `App`.
+>
+> **Data flow.** `mode` is lifted to `App` and passed down; `SearchForm` owns a controlled `query` input; `App`'s `handleSearch` calls the real `/recommend/mood` / `/recommend/track` endpoints and holds `songs`, `strategy`, `hasSearched`, `isLoading`, and `error`. Track mode adds a debounced `useEffect` (300ms, cleaned up via `clearTimeout`) against `GET /search/tracks`, rendering an autocomplete dropdown; selecting a match stores the displayed text and the real `spotify_id` as two separate pieces of state, and `handleSubmit` validates that a track was actually chosen before submitting. Dropdown visibility is *derived at render time* rather than set from inside the effect — the effect's only job is fetching, which avoids a cascading re-render (`react-hooks/set-state-in-effect`) and stops the dropdown reopening after a selection. This required adding `CORSMiddleware` to `app/main.py` (the browser's `OPTIONS` preflight was getting a 405 without it).
+>
+> **Design.** The Streamlit visual identity was kept and rebuilt properly: a sage-green "sleeve stock" page ground with dark ink panels printed on top, Spotify green as the single accent reserved for signal. Type is Fraunces (variable display serif) / Karla / JetBrains Mono, loaded with `preconnect` + `<link>` in `index.html`. All colour, type, radius, and easing values are CSS custom properties on `:root` in `index.css`; no component hardcodes a colour. Results render as a numbered tracklist with a similarity meter and the Claude explanation as an italic liner note, with album + Spotify link revealed on hover via `grid-template-rows: 0fr → 1fr`. Loading is a shimmer skeleton matching the real row rhythm; there are distinct empty states for "before any search" and "search returned nothing". Motion is CSS-only — the staggered row entrance takes each index in as a `--i` custom property — animates `transform`/`opacity` only, and is fully disabled under `prefers-reduced-motion`. `npm run build` and `npm run lint` both pass clean.
+>
+> **Not yet done:** routing (`react-router`), and the login / history pages and auth-aware nav — all blocked on Section 25 landing first. The styling has not yet been reviewed in a browser by Nathan.
+>
+> The current API-key auth is being called from the browser via a `VITE_API_KEY` env var, dev-only and gitignored — a known, explicitly temporary violation of "never expose API keys client-side" (Section 4 Security requirements), resolved once Section 25 (JWT auth) gives the frontend a per-user session token instead of a static shared key.
+
 ### Why React + Vite, not Next.js
 Next.js adds SSR, file-based routing, and server components — real skills, but a different layer than what's being tested for an intern-level SWE role. Plain React + Vite keeps the focus on component architecture, hooks, and client/server data flow. Next.js is a reasonable follow-up later, not a requirement now.
 
@@ -1176,13 +1186,18 @@ Understand the manual loading/error/success state machine by hand before reachin
 `react-router` — needed once there's a login page, a results page, and a history page.
 
 ### Pages / components
-- Login / sign up
-- Mood/track search (rebuild of the current Streamlit flow: SearchBar, SongCard list, ExplanationText)
-- Recommendation results (song title/artist, similarity score, Claude explanation, feedback buttons)
-- History page — past recommendations tied to the logged-in user (depends on Section 25)
-- Nav bar reflecting auth state
+- ~~Mood/track search (rebuild of the current Streamlit flow: SearchBar, SongCard list, ExplanationText)~~ — **done**: `Heading`, `ModeToggle`, `SearchForm` (with autocomplete), `ResultsList`, `SongCard`
+- ~~Recommendation results (song title/artist, similarity score, Claude explanation)~~ — **done**; feedback buttons still pending `POST /feedback`, which is in the ML v2 backlog
+- Login / sign up — pending Section 25
+- History page — past recommendations tied to the logged-in user — pending Section 25
+- Nav bar reflecting auth state — pending Section 25
+
+### Styling approach (and why)
+CSS Modules, one file per component, over a utility framework (Tailwind) or a CSS-in-JS library. Modules give real style scoping with zero runtime and zero build config beyond what Vite already does, and they keep the CSS readable as CSS — which matters for a project whose point is being able to explain its own decisions. The design system is a set of custom properties on `:root`, so re-theming is a one-file change. Tailwind is a defensible alternative and a common one in industry; the tradeoff to be able to name is that it moves styling into the markup and trades readable stylesheets for faster iteration.
 
 **Definition of done:** React frontend fully replaces Streamlit as the product-facing entry point, deployed and calling the existing FastAPI endpoints plus the new auth endpoints. Nathan can explain the component structure, state flow, and at least one rendering/performance decision without notes.
+
+**Progress against that:** the search + results experience is complete and styled; deployment and the auth-dependent pages remain. Decisions worth being able to defend cold: lifting `mode` to `App` vs. keeping it local; why the mood submit is *not* a `useEffect` but the autocomplete is; why dropdown visibility is derived rather than stored; why the row stagger is `--i` + CSS rather than a JS animation loop; why the meter animates `transform: scaleX()` instead of `width`.
 
 ---
 

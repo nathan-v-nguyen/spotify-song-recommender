@@ -1,0 +1,179 @@
+/* One tracklist row: rank, title, similarity meter, liner note, hover details. */
+
+.row {
+  display: grid;
+  grid-template-columns: 2.6rem 1fr;
+  gap: 4px 14px;
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  transition: background 0.22s var(--ease);
+  /* --i is set inline by ResultsList so each row enters slightly after the one
+     above it — one orchestrated reveal instead of ten simultaneous ones. */
+  animation: rowIn 0.5s var(--ease) both;
+  animation-delay: calc(var(--i) * 45ms);
+}
+
+.row + .row {
+  border-top: 1px solid var(--ink-line);
+}
+
+.row:hover,
+.row:focus-within {
+  background: rgb(29 185 84 / 0.05);
+}
+
+@keyframes rowIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.rank {
+  grid-row: 1 / -1;
+  padding-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cream-faint);
+  transition: color 0.22s var(--ease);
+}
+
+.row:hover .rank {
+  color: var(--green);
+}
+
+.name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-variation-settings: 'opsz' 40, 'SOFT' 20, 'WONK' 1;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--cream);
+}
+
+.artist {
+  margin: 1px 0 12px;
+  font-size: 13px;
+  color: var(--cream-dim);
+}
+
+/* ── Similarity meter ────────────────────────────────────────────────────── */
+
+.meter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.track {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--ink-line);
+  overflow: hidden;
+}
+
+/* The bar is laid out at its real width, then scaled in — animating a transform
+   is compositor-only, where animating `width` would relayout on every frame. */
+.fill {
+  height: 100%;
+  width: var(--pct);
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--green), var(--green-lit));
+  transform-origin: left;
+  animation: fillIn 0.75s var(--ease) both;
+  animation-delay: calc(var(--i) * 45ms + 160ms);
+}
+
+@keyframes fillIn {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.score {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--cream-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Liner note ──────────────────────────────────────────────────────────── */
+
+.note {
+  margin: 12px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid rgb(29 185 84 / 0.35);
+  font-size: 13.5px;
+  font-style: italic;
+  line-height: 1.55;
+  color: var(--cream-dim);
+}
+
+/* ── Hover-revealed footer ───────────────────────────────────────────────── */
+
+/* 0fr → 1fr animates a grid track from nothing to its natural height, so the
+   reveal works for any content length — no guessed max-height to overflow. */
+.reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.3s var(--ease),
+    opacity 0.22s var(--ease);
+}
+
+.row:hover .reveal,
+.row:focus-within .reveal {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.revealInner {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  overflow: hidden; /* required for the 0fr collapse to actually clip */
+}
+
+.album {
+  padding-top: 12px;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: var(--cream-faint);
+}
+
+.link {
+  flex-shrink: 0;
+  padding-top: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--green);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.link:hover {
+  color: var(--green-lit);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 560px) {
+  .row {
+    grid-template-columns: 2rem 1fr;
+    padding: 14px 12px;
+  }
+
+  .name {
+    font-size: 17px;
+  }
+}
