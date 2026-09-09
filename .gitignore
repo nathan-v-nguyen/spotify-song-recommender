@@ -21,3 +21,9 @@ data/
 # Model artifacts (models/) are committed so Render can load them at startup —
 # rebuild locally with scripts/build_index.py.
 frontend/.streamlit/secrets.toml
+
+# node modules
+node_modules/
+
+# dist
+dist/
