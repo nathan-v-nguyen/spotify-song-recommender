@@ -33,7 +33,7 @@ spotify-song-recommender/
 │   ├── auth.py              # API key validation
 │   ├── limiter.py           # Rate limiting
 │   ├── recommender.py       # Retrieval logic (Annoy index)
-│   ├── ranker.py            # Strategy A ranking (cosine similarity); Strategy B not built
+│   ├── ranker.py            # ranker_a: cosine on 9 features (live in API); ranker_b: cosine on 8 features + popularity boost (eval-only, not wired into the API)
 │   ├── mood.py              # Claude mood → audio features
 │   ├── explainer.py         # Claude explanation generation
 │   └── utils.py             # empty placeholder — no current use
@@ -43,7 +43,7 @@ spotify-song-recommender/
 │   ├── create_api_key.py    # Generate an API key and assign its A/B group
 │   ├── test_recommender.py  # Manual smoke test for recommender.py (not a pytest test)
 │   ├── eval_queries.py      # Fixed evaluation set: 6 MoodQuery + 6 TrackQuery frozen dataclasses (the run-comparison test set)
-│   └── evaluate_pipeline.py # Offline eval harness: avg similarity, latency, avg popularity over the eval set (run: python3 -m scripts.evaluate_pipeline)
+│   └── evaluate_pipeline.py # Offline eval harness + MLflow run logging: avg similarity, latency, avg popularity over the eval set (run: python3 -m scripts.evaluate_pipeline)
 ├── models/                  # Committed: annoy_index.ann, scaler.pkl, track_id_map.json (ranker_b.pkl not built)
 ├── data/                    # dataset.csv — Kaggle catalog for seed_catalog.py (gitignored, local-only)
 ├── frontend/                # Streamlit dashboard (legacy, kept as internal metrics view — app.py)
@@ -72,7 +72,7 @@ spotify-song-recommender/
 
 Planned, not yet created (see Next Steps / ML v2 backlog below):
   app/experiment.py          # A/B assignment + metrics — logic currently inlined in main.py, not extracted
-  MLflow tracking calls      # wrap the evaluate_pipeline.py calls in mlflow runs — Priority 1 (MLflow chosen over W&B; mlflow==3.16.1 already in requirements.txt)
+  config object              # one place for n_trees / candidate pool / popularity weight (currently literals in evaluate_pipeline.py) — Priority 1 cleanup
   vector DB / RAG component  # Pinecone or FAISS, replacing/augmenting Annoy — Priority 2
   learned embedding model    # PyTorch, replacing the hand-engineered audio features — Priority 3
   Airflow DAG                # orchestrating the data ingestion/feature pipeline — stretch
@@ -90,14 +90,14 @@ Planned, not yet created (see Next Steps / ML v2 backlog below):
 | Migrations | Alembic |
 | Database | PostgreSQL 15 (Docker) |
 | Similarity search | Annoy — candidate for replacement/augmentation by a vector DB, see Project Goals |
-| Ranking | numpy (Strategy A); LightGBM Strategy B not built — not currently scheduled, see Current Status |
+| Ranking | numpy (`ranker_a` live; `ranker_b` popularity-boost ranker, eval-only); LightGBM ranker not built — not currently scheduled, see Current Status |
 | LLM | Anthropic SDK — claude-sonnet-4-20250514 |
 | Spotify client | spotipy |
 | Rate limiting | slowapi |
 | Testing | pytest + httpx |
 | Frontend (product UI) | React + Vite + TypeScript, CSS Modules — complete, frozen (no further work planned) |
 | Frontend (legacy dashboard) | Streamlit |
-| Experiment tracking | MLflow (chosen over W&B: open source, self-hosted, generalist DS association) — Priority 1, installed, tracking calls not yet wired |
+| Experiment tracking | MLflow 3.16.1 (chosen over W&B: open source, self-hosted, generalist DS association) — Priority 1, live: runs logged to local SQLite (`mlflow.db`) + `mlruns/` artifacts |
 | Vector search / RAG | Pinecone or FAISS — Priority 2, not yet built |
 | Deep learning | PyTorch — learned embedding model — Priority 3, not yet built |
 | Orchestration (stretch) | Airflow — Priority 4, not yet built |
@@ -181,7 +181,14 @@ docker compose up
 # Run alembic or any script outside Docker (venv active). .env points DATABASE_URL at
 # localhost; docker-compose.yml overrides it to the `db` host for the app container.
 alembic upgrade head
-python3 -m scripts.evaluate_pipeline
+python3 -m scripts.evaluate_pipeline   # logs one MLflow run; edit RUN_NAME/RANKER/POPULARITY_WEIGHT in __main__ first, commit before running
+
+# MLflow UI — run from the project root (mlflow.db is relative to cwd), then open http://localhost:5000
+# Use the "Model training" toggle (top-left), not GenAI, then Runs tab → tick runs → Compare
+mlflow ui
+
+# Permanently purge soft-deleted experiments/runs (UI delete is soft and keeps the name reserved)
+mlflow gc --backend-store-uri sqlite:///mlflow.db --tracking-uri sqlite:///mlflow.db
 
 # Run tests
 pytest tests/ -v
@@ -258,19 +265,26 @@ brew services stop postgresql@15
 - `scripts/evaluate_pipeline.py` — `evaluate_mood_queries` / `evaluate_track_queries` return a frozen `EvalMetrics` (average_similarity, average_latency, average_popularity); shared averaging lives in `calc_eval_metrics`. Latency is timed with `time.perf_counter()` around `get_candidates` + `ranker_a` only (excludes the Claude `translate_mood` call and the seed DB lookup). Runs end-to-end. Baseline (before popularity metric): similarity ≈ 0.997 (mood) / 0.993 (track), latency ≈ 0.069–0.070 s.
 - Metric caveats (know these for interviews): average top-10 cosine similarity saturates near 1.0 (non-negative scaled features, candidates pre-selected by the same angular geometry) and isn't comparable across runs that change the feature set; latency is noisy run to run; average popularity is the hypothesis-matched metric for the planned popularity change. Track mode uses the seed's own popularity in the query vector while mood mode hardcodes 75 — a known confound.
 - Env — `.env` `DATABASE_URL` points at `@localhost` so scripts run outside Docker; `docker-compose.yml` overrides it to the `db` host for the app container. `mlflow==3.16.1` added to `requirements.txt` (2.19.0 conflicts with `pandas==3.0.2`).
+- MLflow wired in `evaluate_pipeline.py` `__main__` — one run per pipeline configuration (mood and track evaluations share a run; metrics prefixed `mood_`/`track_`). Params: `n_trees`, `popularity_target` (`"N/A"` for ranker B, which ignores it), `candidate_pool_size`, `index_hash`, `ranker`, `popularity_weight`. Metrics: the 6 values. Artifacts: `scaler.pkl` and `eval_queries.py` every run; `annoy_index.ann` only when its SHA-256 hash (`file_hash`) hasn't been stored by an earlier run (`index_already_logged` via `mlflow.search_runs`; search happens before `start_run` so a run can't match itself). MLflow 3.x default backend is SQLite `mlflow.db`; both it and `mlruns/` are gitignored. Run `mlflow ui` and the script from the project root.
+- `ranker_b` (`app/ranker.py`) — cosine similarity on the first 8 scaled features (popularity sliced off *before* unit-normalizing), ranks by `similarity + popularity_weight * scaled_popularity`, returns pure cosine similarity. Retrieval still uses the 9-feature Annoy index, so candidates are still popularity-influenced (a later run could rebuild on 8 features). `evaluate_*` take a `ranker` callable; `functools.partial` binds the weight.
+- Results (6 mood + 6 track queries; single measurement, directional only):
+  - `baseline` (ranker_a): mood sim 0.997 / latency 0.079 s / popularity 73; track sim 0.993 / 0.063 s / popularity 50.67.
+  - `boost-w0.05` (ranker_b): mood sim 0.995 / 0.072 s / popularity 81.8; track sim 0.992 / 0.030 s / popularity 63.07.
+  - Reading: popularity +9 (mood) / +12 (track) for ≈0.001–0.002 similarity — cheap because candidate cosine scores sit in a very narrow band (~0.99), which also means even small weights reweight heavily. Baseline mood popularity (73) sat just under the 75 target because popularity was inside the similarity vector; the boost removes that ceiling (target → "more is better"). Similarity isn't strictly comparable between runs (8 vs 9 features). Track latency halving is likely warm-up/cache noise, not a real win.
+- Open caveats: `translate_mood` calls Claude live each run, so mood feature vectors may drift between runs (check by rerunning baseline; cache translated vectors in the eval set if they do). Experiment-design workflow learned: commit before each run (MLflow records params, not code); never log a `partial` object as a param (its repr contains a memory address).
 
 **ML v2 backlog (accurate gap, not currently scheduled ahead of the roadmap below):**
 - `POST /feedback`, `GET /experiments/results` — not built
-- Strategy B (LightGBM ranker) — not built
+- Strategy B (LightGBM ranker) — not built (the name `ranker_b` is now used by the popularity-boost ranker, which is eval-only and not an A/B arm)
 - A/B assignment — both endpoints hardcode `experiment_group="A"`; not wired to the API-key hash yet
 
 **In progress:**
 - Nothing actively in progress. The React frontend is feature- and styling-complete and frozen — no further frontend work planned. The JWT auth work that was briefly started (users table design, `/auth/*` contracts) was abandoned when the project pivoted back to DS/ML; none of that was implemented and none of it carries forward.
-- MLOps / experiment tracking (Priority 1) is underway: the eval harness exists and runs; the MLflow tracking calls are not yet wired. Pending small cleanups in `evaluate_pipeline.py`: add a module docstring, inline the aggregation into the `EvalMetrics(...)` return so both `evaluate_*` functions are under the 40-line limit, make the `avg_`/`average_` naming consistent, mention popularity in the docstrings, then run the script to get the first average-popularity baseline.
+- MLOps / experiment tracking (Priority 1) is mostly done: two comparable runs (`baseline`, `boost-w0.05`) are logged and compared in the MLflow UI, with params, metrics, and artifacts captured (definition of done met). Remaining: a popularity-weight sweep, a config object for the literal params, and optional cleanups (type hint on the `ranker` argument, trailing whitespace, aggregation could be inlined; `evaluate_*` slightly exceed the 40-line guideline — relaxed for this script).
 - RAG/vector DB, deep learning component, and Airflow have not yet been started.
 
 **Next steps (current priority, in order):**
-1. MLOps / experiment tracking — (a) finish the `evaluate_pipeline.py` cleanups and record the baseline incl. average popularity; (b) wrap the two `evaluate_*` calls in `mlflow.start_run()`: `log_param` for the config knobs, `log_metric` for the 6 metrics (3 mood, 3 track), `log_artifact` for `scaler.pkl`, `annoy_index.ann`, and the eval query set; (c) consolidate the magic numbers into one config object; (d) verify two comparable runs in the MLflow UI — planned "run 2": decouple popularity from the similarity vector and use it as a post-retrieval boost/filter, compared against baseline on average popularity; (e) update docs. Tracking belongs in offline scripts, not the live request path
+1. MLOps / experiment tracking — finish up: (a) sweep `popularity_weight` (e.g. 0.02, 0.1, 0.2) as separate runs and read the popularity-vs-similarity tradeoff curve in the MLflow compare view; (b) check whether mood translations drift between runs (rerun baseline) and cache them if so; (c) consolidate the literal params (`n_trees`, candidate pool, popularity target/weight) into one config object; (d) optionally log per-query values to see which query drives each metric. Tracking belongs in offline scripts, not the live request path
 2. RAG / vector database — replace or supplement Annoy with a proper vector database (Pinecone or FAISS); restructure the Claude mood-translation step (`app/mood.py`) as an actual retrieval-augmented pipeline
 3. Deep learning component — a learned embedding model (PyTorch) replacing the hand-engineered 9 audio features, giving a real project behind "PyTorch" rather than a listed-but-unproven skill
 4. (Stretch) Airflow — orchestrate the data ingestion/feature pipeline (`scripts/seed_catalog.py` → `scripts/build_index.py`) instead of running it manually
