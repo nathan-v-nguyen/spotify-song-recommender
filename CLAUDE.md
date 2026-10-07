@@ -2,21 +2,26 @@
 
 ## Project Goals
 
-Moodify is a full-stack music recommendation product. The ML/recommendation core is done: a FastAPI backend that accepts a seed track or natural language mood description and returns 10 personalized song recommendations with explanations, plus an A/B testing framework comparing two ranking strategies (MD5 bucketing, request logging, feedback collection, Streamlit metrics dashboard).
+Moodify is a full-stack music recommendation product built on a real ML pipeline: a FastAPI backend that accepts a seed track or natural language mood description and returns 10 personalized song recommendations with explanations, plus an A/B testing framework comparing two ranking strategies (MD5 bucketing, request logging, feedback collection, Streamlit metrics dashboard).
 
-**That ML core is no longer the focus.** Nathan is a Data Science major recruiting for Software Engineering internships, not ML/DS roles. The project is now being turned into a complete SWE product by closing specific skill gaps, in priority order: (1) a real React frontend, (2) user accounts and auth (JWT/sessions) with saved history, (3) testing (pytest) and CI/CD (GitHub Actions), (4) a system design write-up, (5) stretch — a real-time/concurrent feature. Full detail: `docs/project_spec.md` Part 3 (Sections 24–28), and `docs/overview.md`.
+**This project's focus is DS/ML, not SWE.** Nathan is a Data Science major recruiting for Data Science, Data Analyst, and Machine Learning internships for Summer 2027 — most of his existing skills already sit in this track. (An earlier direction pursued SWE internships instead and added a React frontend; that frontend stays as a finished, working demo layer, but is no longer being built out further.) Effort now goes into closing specific ML/DS skill gaps identified from current DS/ML/MLE internship postings, in priority order:
 
-**Primary audience:** SWE internship recruiters and hiring managers at startups — Meta/TikTok-style consumer tech as stretch targets, not ML engineering hiring managers  
-**Definition of done:** A complete full-stack product — React frontend, auth, tested and CI/CD'd backend — live on Render, plus a defensible system design write-up  
-**Current milestone:** React frontend (Priority 1) — pre-auth scope complete (both search flows + full styling pass); the rest of the frontend is blocked on Priority 2. See Current Status and Next Steps below
+1. **MLOps / experiment tracking** — instrument the existing A/B pipeline with MLflow or Weights & Biases (run tracking, model versioning, metrics)
+2. **A real RAG / vector database component** — replace or supplement Annoy with a proper vector database (Pinecone or FAISS) and restructure the Claude mood-translation step as an actual RAG pipeline
+3. **A defensible deep learning component** — a learned embedding model (PyTorch) replacing the hand-engineered 9 audio features, so "PyTorch" has a real project behind it
+4. **(Stretch) Airflow orchestration** for the data ingestion/feature pipeline
 
-**How to help Nathan on this project:** prioritize teaching the underlying SWE fundamentals while building, not just producing working code. Explain the *why* behind frontend/auth/testing patterns as you go — Nathan dislikes "vibe coding" parts he doesn't understand and needs to be able to defend any architectural decision in a technical interview.
+**Primary audience:** DS / Data Analyst / ML internship recruiters and hiring managers  
+**Definition of done:** A DS/ML portfolio project demonstrating production ML engineering maturity — real experiment tracking, a RAG-based retrieval component, and a real deep-learning component — built on top of the existing A/B-tested recommendation pipeline and demoable via the existing React frontend  
+**Current milestone:** MLOps / experiment tracking (Priority 1 of the list above). See Current Status and Next Steps below
+
+**How to help Nathan on this project:** prioritize teaching the underlying DS/ML/MLOps fundamentals while building, not just producing working code. Explain the *why* behind experiment-tracking, RAG/vector-search, and embedding-model patterns as you go — Nathan dislikes "vibe coding" parts he doesn't understand and needs to be able to defend any architectural decision in a technical interview.
 
 ---
 
 ## Architecture Overview
 
-FastAPI backend + PostgreSQL database running in Docker. Annoy index for fast similarity search. Claude API for mood translation and explanation generation. A React + TypeScript frontend (Priority 1 — both search flows working end-to-end and fully styled; auth-dependent pages still to come) is replacing Streamlit as the product-facing UI; the Streamlit app is now repositioned as an internal metrics/demo dashboard.
+FastAPI backend + PostgreSQL database running in Docker. Annoy index for fast similarity search — candidate for replacement/augmentation by a real vector DB, see Project Goals. Claude API for mood translation and explanation generation, with the mood-translation step a candidate for restructuring into an actual RAG pipeline. A React + TypeScript frontend serves as the product-facing demo UI — feature- and styling-complete, frozen, no further frontend work planned. The Streamlit app remains an internal metrics/demo dashboard.
 
 ```
 spotify-song-recommender/
@@ -36,12 +41,14 @@ spotify-song-recommender/
 │   ├── seed_catalog.py      # Populate tracks table from Kaggle CSV
 │   ├── build_index.py       # Build and save Annoy index
 │   ├── create_api_key.py    # Generate an API key and assign its A/B group
-│   └── test_recommender.py  # Manual smoke test for recommender.py (not a pytest test)
+│   ├── test_recommender.py  # Manual smoke test for recommender.py (not a pytest test)
+│   ├── eval_queries.py      # Fixed evaluation set: 6 MoodQuery + 6 TrackQuery frozen dataclasses (the run-comparison test set)
+│   └── evaluate_pipeline.py # Offline eval harness: avg similarity, latency, avg popularity over the eval set (run: python3 -m scripts.evaluate_pipeline)
 ├── models/                  # Committed: annoy_index.ann, scaler.pkl, track_id_map.json (ranker_b.pkl not built)
 ├── data/                    # dataset.csv — Kaggle catalog for seed_catalog.py (gitignored, local-only)
 ├── frontend/                # Streamlit dashboard (legacy, kept as internal metrics view — app.py)
-├── frontend-react/          # React + TypeScript product UI (Vite, CSS Modules) — Priority 1, pre-auth scope done
-│   ├── .env                 # VITE_API_KEY — dev-only, gitignored (see Current Status re: temporary auth gap)
+├── frontend-react/          # React + TypeScript product UI (Vite, CSS Modules) — complete, frozen
+│   ├── .env                 # VITE_API_KEY — dev-only, gitignored (see Current Status re: known gap, not being resolved)
 │   ├── index.html           # Google Fonts <link> (Fraunces / Karla / JetBrains Mono), page title, meta
 │   ├── public/favicon.svg   # custom mark (dark tile, sage record rings, green spindle)
 │   └── src/
@@ -55,7 +62,7 @@ spotify-song-recommender/
 │           ├── SongCard.tsx
 │           └── ResultsList.tsx
 ├── alembic/                 # Migration environment and versions
-├── tests/                   # pytest — test_health.py, test_recommend.py only; full suite is Priority 3
+├── tests/                   # pytest — test_health.py, test_recommend.py only; not currently being expanded
 ├── .env                     # Never commit
 ├── alembic.ini
 ├── render.yaml              # Render Blueprint (API + Postgres)
@@ -65,7 +72,10 @@ spotify-song-recommender/
 
 Planned, not yet created (see Next Steps / ML v2 backlog below):
   app/experiment.py          # A/B assignment + metrics — logic currently inlined in main.py, not extracted
-  .github/workflows/ci.yml   # GitHub Actions CI — Priority 3, not yet created
+  MLflow tracking calls      # wrap the evaluate_pipeline.py calls in mlflow runs — Priority 1 (MLflow chosen over W&B; mlflow==3.16.1 already in requirements.txt)
+  vector DB / RAG component  # Pinecone or FAISS, replacing/augmenting Annoy — Priority 2
+  learned embedding model    # PyTorch, replacing the hand-engineered audio features — Priority 3
+  Airflow DAG                # orchestrating the data ingestion/feature pipeline — stretch
 ```
 
 ---
@@ -79,16 +89,18 @@ Planned, not yet created (see Next Steps / ML v2 backlog below):
 | ORM | SQLAlchemy 2.0 |
 | Migrations | Alembic |
 | Database | PostgreSQL 15 (Docker) |
-| Similarity search | Annoy |
-| Ranking | numpy (Strategy A); LightGBM Strategy B not built — deprioritized, see Current Status |
+| Similarity search | Annoy — candidate for replacement/augmentation by a vector DB, see Project Goals |
+| Ranking | numpy (Strategy A); LightGBM Strategy B not built — not currently scheduled, see Current Status |
 | LLM | Anthropic SDK — claude-sonnet-4-20250514 |
 | Spotify client | spotipy |
 | Rate limiting | slowapi |
 | Testing | pytest + httpx |
-| CI | GitHub Actions |
-| Frontend (product UI) | React + Vite + TypeScript, CSS Modules — Priority 1, pre-auth scope done |
+| Frontend (product UI) | React + Vite + TypeScript, CSS Modules — complete, frozen (no further work planned) |
 | Frontend (legacy dashboard) | Streamlit |
-| Auth | JWT (PyJWT) + passlib/bcrypt — Priority 2, not yet built |
+| Experiment tracking | MLflow (chosen over W&B: open source, self-hosted, generalist DS association) — Priority 1, installed, tracking calls not yet wired |
+| Vector search / RAG | Pinecone or FAISS — Priority 2, not yet built |
+| Deep learning | PyTorch — learned embedding model — Priority 3, not yet built |
+| Orchestration (stretch) | Airflow — Priority 4, not yet built |
 | Deployment | Render |
 
 ---
@@ -166,8 +178,10 @@ docker compose up db
 # Start full stack
 docker compose up
 
-# Run alembic outside Docker (use localhost not db)
-DATABASE_URL=postgresql://postgres:password@localhost:5432/recsys alembic upgrade head
+# Run alembic or any script outside Docker (venv active). .env points DATABASE_URL at
+# localhost; docker-compose.yml overrides it to the `db` host for the app container.
+alembic upgrade head
+python3 -m scripts.evaluate_pipeline
 
 # Run tests
 pytest tests/ -v
@@ -220,7 +234,7 @@ brew services stop postgresql@15
 - Real API integration — `App.tsx`'s `handleSearch` is async: builds the correct endpoint (`/recommend/mood` vs `/recommend/track`) and body (`mood_string` vs `spotify_id`) from `mode`, fetches with the `X-API-Key` header, and updates `songs` state from the response's `recommendations` array. Verified working end-to-end — live recommendations render in `ResultsList`.
 - `app/main.py` — added `CORSMiddleware` (`allow_origins=["http://localhost:5173"]`) so the Vite dev server's requests aren't blocked; without it the browser's automatic `OPTIONS` preflight got a 405 (no OPTIONS route existed) and the real POST never ran.
 - `.gitignore` — added `frontend-react/node_modules/`.
-- **Known temporary gap:** the frontend currently authenticates to `/recommend/*` using a dev API key read from `frontend-react/.env` (`VITE_API_KEY`, gitignored). This is a real, called-out violation of the "never expose API keys client-side" rule above — acceptable only because this is local-only dev traffic. Resolved once Priority 2 (JWT auth) gives the frontend a per-user session token instead of a static shared key.
+- **Known gap, not being resolved:** the frontend authenticates to `/recommend/*` using a dev API key read from `frontend-react/.env` (`VITE_API_KEY`, gitignored). This is a real, called-out violation of the "never expose API keys client-side" rule above, acceptable only because this is local-only dev traffic on a frozen demo frontend. Auth work to fix this properly is out of scope after the DS/ML pivot (see Project Goals) — if this frontend is ever put in front of real users, this needs revisiting first.
 - `isLoading`/`error` state — added to `App`'s `handleSearch` (`setIsLoading`/`setError` around a `try/catch/finally`, with `error` reset at the start of every call so a stale message can't linger into a new attempt) and threaded down to `SearchForm` as props. `SearchForm` shows "Loading..." and disables the submit button while a request is in flight, and renders the error message inline.
 - Track-search autocomplete — `SearchForm` has a debounced `useEffect` (`[query, mode]` dependency array, 300ms `setTimeout` + `clearTimeout` cleanup) that calls `GET /search/tracks` while in track mode and renders a clickable suggestion dropdown. Selecting a suggestion sets the displayed text (`query`) and the actual `spotify_id` to submit (`selectedTrackId`) as two separate pieces of state, since what's shown to the user isn't what the API needs. `handleSubmit` validates before submitting in track mode — "Please choose from the dropdown" if suggestions exist but none was picked, "Song not found" if nothing matched. This is the first real use of `useEffect` in the project; the mood-flow submit fetch correctly still doesn't use one, since it's triggered by an event, not a changing value to sync with.
 - Input clearing — `SearchForm` resets `query` and `selectedTrackId` after a successful submit.
@@ -238,26 +252,33 @@ brew services stop postgresql@15
 - Dead code removed — `src/App.css` (unused Vite scaffold boilerplate, never imported).
 - Verified: `npm run build` (tsc + vite) and `npm run lint` both pass clean.
 
-**ML v2 backlog (accurate gap, deliberately not prioritized — see Project Goals):**
+**MLOps groundwork (Priority 1) — complete so far:**
+- Run definition — a "run" is one distinct pipeline configuration, not one API request. Real knobs today: Annoy `n_trees` (50, build-time), features included in the 9-feature vector, popularity target (hardcoded 75 in the mood flow), candidate pool size (`n=500` in `get_candidates`, query-time). These are still scattered magic numbers; consolidating them into one config object is a prerequisite for clean `log_param` calls.
+- `scripts/eval_queries.py` — fixed evaluation set so runs are comparable: 6 mood strings and 6 seed tracks (spotify_ids), chosen to cover the valence/energy quadrants (happy/energetic, calm/content, sad, angry/tense) plus high speechiness and high instrumentalness/acousticness.
+- `scripts/evaluate_pipeline.py` — `evaluate_mood_queries` / `evaluate_track_queries` return a frozen `EvalMetrics` (average_similarity, average_latency, average_popularity); shared averaging lives in `calc_eval_metrics`. Latency is timed with `time.perf_counter()` around `get_candidates` + `ranker_a` only (excludes the Claude `translate_mood` call and the seed DB lookup). Runs end-to-end. Baseline (before popularity metric): similarity ≈ 0.997 (mood) / 0.993 (track), latency ≈ 0.069–0.070 s.
+- Metric caveats (know these for interviews): average top-10 cosine similarity saturates near 1.0 (non-negative scaled features, candidates pre-selected by the same angular geometry) and isn't comparable across runs that change the feature set; latency is noisy run to run; average popularity is the hypothesis-matched metric for the planned popularity change. Track mode uses the seed's own popularity in the query vector while mood mode hardcodes 75 — a known confound.
+- Env — `.env` `DATABASE_URL` points at `@localhost` so scripts run outside Docker; `docker-compose.yml` overrides it to the `db` host for the app container. `mlflow==3.16.1` added to `requirements.txt` (2.19.0 conflicts with `pandas==3.0.2`).
+
+**ML v2 backlog (accurate gap, not currently scheduled ahead of the roadmap below):**
 - `POST /feedback`, `GET /experiments/results` — not built
 - Strategy B (LightGBM ranker) — not built
 - A/B assignment — both endpoints hardcode `experiment_group="A"`; not wired to the API-key hash yet
 
 **In progress:**
-- Nothing actively in progress on Priority 1. The React frontend is feature- and styling-complete for the pre-auth scope; the remaining frontend work (routing, login/signup, history page, nav reflecting auth state) is blocked on Priority 2 landing first.
-- Not yet visually reviewed in a browser by Nathan — the styling pass is verified by a clean `tsc`/`vite build`/`eslint` run, not by a screenshot.
+- Nothing actively in progress. The React frontend is feature- and styling-complete and frozen — no further frontend work planned. The JWT auth work that was briefly started (users table design, `/auth/*` contracts) was abandoned when the project pivoted back to DS/ML; none of that was implemented and none of it carries forward.
+- MLOps / experiment tracking (Priority 1) is underway: the eval harness exists and runs; the MLflow tracking calls are not yet wired. Pending small cleanups in `evaluate_pipeline.py`: add a module docstring, inline the aggregation into the `EvalMetrics(...)` return so both `evaluate_*` functions are under the 40-line limit, make the `avg_`/`average_` naming consistent, mention popularity in the docstrings, then run the script to get the first average-popularity baseline.
+- RAG/vector DB, deep learning component, and Airflow have not yet been started.
 
-**Next steps (current priority, in order — full detail in `docs/project_spec.md` Part 3):**
-1. React frontend — **pre-auth scope complete**: mood and track-search flows both working end-to-end with loading/error/validation states, plus a full styling pass (record-sleeve design system, see Current Status). Remaining frontend work — `react-router`, login/signup pages, history page, nav reflecting auth state — depends on Priority 2 landing first
-2. Auth & user accounts — JWT access/refresh tokens, bcrypt password hashing, `users` table, `/auth/*` endpoints, `user_id` on `recommendation_logs`/`feedback` — also removes the temporary `VITE_API_KEY` gap noted above
-3. Testing + CI/CD — expand `tests/` beyond `test_health.py`/`test_recommend.py` to a full pytest suite (backend + auth), wire GitHub Actions to run on push and auto-deploy to Render on merge
-4. System design write-up — `docs/SYSTEM_DESIGN.md` covering architecture, explicit tradeoffs, scaling, and known limitations
-5. (Stretch) Real-time/concurrent feature — streamed explanations, live experiment metrics, or documented load/concurrency testing
+**Next steps (current priority, in order):**
+1. MLOps / experiment tracking — (a) finish the `evaluate_pipeline.py` cleanups and record the baseline incl. average popularity; (b) wrap the two `evaluate_*` calls in `mlflow.start_run()`: `log_param` for the config knobs, `log_metric` for the 6 metrics (3 mood, 3 track), `log_artifact` for `scaler.pkl`, `annoy_index.ann`, and the eval query set; (c) consolidate the magic numbers into one config object; (d) verify two comparable runs in the MLflow UI — planned "run 2": decouple popularity from the similarity vector and use it as a post-retrieval boost/filter, compared against baseline on average popularity; (e) update docs. Tracking belongs in offline scripts, not the live request path
+2. RAG / vector database — replace or supplement Annoy with a proper vector database (Pinecone or FAISS); restructure the Claude mood-translation step (`app/mood.py`) as an actual retrieval-augmented pipeline
+3. Deep learning component — a learned embedding model (PyTorch) replacing the hand-engineered 9 audio features, giving a real project behind "PyTorch" rather than a listed-but-unproven skill
+4. (Stretch) Airflow — orchestrate the data ingestion/feature pipeline (`scripts/seed_catalog.py` → `scripts/build_index.py`) instead of running it manually
 
 ---
 
 ## Documentation
 
 - [Overview](docs/overview.md) — full project context, career goals, background
-- [Project Spec](docs/project_spec.md) — detailed requirements, API contract, architecture decisions; Part 3 (Sections 24–28) is the current SWE roadmap
+- [Project Spec](docs/project_spec.md) — detailed requirements, API contract, architecture decisions; Part 3 (Sections 24–28) documents the earlier SWE-focused roadmap (React frontend built during that phase and kept; auth/testing-CI-CD/system-design-writeup sections describe abandoned work, not a plan) — see Section 0 in that file for the current DS/ML direction
 - Update files in docs folder after major milestones and major additions to the project

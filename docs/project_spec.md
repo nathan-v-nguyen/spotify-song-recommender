@@ -2,28 +2,29 @@
 
 **Author:** Nathan Nguyen  
 **Type:** Personal portfolio project  
-**Primary audience:** Software Engineering internship recruiters and hiring managers at startups — with consumer tech companies like Meta and TikTok as stretch targets. Not ML/DS roles.  
-**Definition of done:** A complete full-stack SWE product — React frontend, user accounts and auth, tested and CI/CD'd backend — live on Render, plus a system design write-up Nathan can defend in an interview.  
+**Primary audience:** Data Science, Data Analyst, and Machine Learning internship recruiters and hiring managers.  
+**Definition of done:** A DS/ML portfolio project demonstrating production ML engineering maturity — real experiment tracking, a RAG-based retrieval component, and a real deep-learning component — built on top of the existing A/B-tested recommendation pipeline, demoable via the existing (frozen) React frontend.  
 **Most important quality:** Nathan's own understanding of every architectural decision. Working code that Nathan can't explain does not count as done.  
-**Claude's role on this project:** Teach the underlying SWE fundamentals while building — explain the *why* behind frontend, auth, and testing patterns, not just produce working code. Nathan dislikes "vibe coding" parts he doesn't understand.
+**Claude's role on this project:** Teach the underlying DS/ML/MLOps fundamentals while building — explain the *why* behind experiment-tracking, RAG/vector-search, and embedding-model patterns, not just produce working code. Nathan dislikes "vibe coding" parts he doesn't understand.
 
 ---
 
 ## 0. Project Pivot — Read This First
 
-**The ML/recommendation core (retrieval + ranking pipeline, mood translation, A/B bucketing, Streamlit dashboard) is functionally done and is no longer the focus of this project.** Sections 1–23 below document that system and remain accurate as a technical reference, but they describe *already-built* work, not what to prioritize next.
+**This project has pivoted twice. This section describes the current (second) pivot, which supersedes the first.**
 
-**Why the pivot:** Nathan is a Data Science major recruiting for Software Engineering internships, not ML/DS roles. He originally leaned toward an "ML" identity because he's good at math and it seemed like the obvious path — but his actual strengths point toward product/application engineering: well-scoped, correctness-driven problems, building things real users touch, and a preference for that over open-ended data cleaning and ML experimentation.
+**Pivot 1 (historical):** the ML/recommendation core (retrieval + ranking pipeline, mood translation, A/B bucketing, Streamlit dashboard) was declared functionally done, and the project turned toward becoming a SWE portfolio piece — a React frontend, JWT auth, testing/CI-CD, and a system design write-up, on the reasoning that Nathan's actual strengths pointed toward SWE roles over ML/DS. That work is documented in **Part 3 (Sections 24–28)** below. Of that work, only the **React frontend was actually built** (Section 24) — auth, testing/CI-CD, and the system design write-up were never implemented.
 
-**What "done" means now:** closing the specific SWE skill gaps this project doesn't yet demonstrate, in this order:
+**Pivot 2 (current):** Nathan's actual recruiting goal is Data Science, Data Analyst, and Machine Learning internships for Summer 2027 — most of his existing skills already sit in this track. A gap analysis against current DS/ML/MLE internship postings surfaced specific, concrete gaps: no MLOps/experiment-tracking tooling, no RAG/vector-database work, no applied deep learning project despite PyTorch being listed as a skill. **The project is now oriented back toward DS/ML**, closing those gaps on top of the existing ML core, in this order:
 
-1. **A real React frontend** — the product currently has an API and a Streamlit dashboard, not a real product UI.
-2. **User accounts and auth** (sessions/JWT) — saved history and feedback tied to real users, not just API keys.
-3. **Testing and CI/CD** — pytest unit + integration tests, GitHub Actions running tests on push and auto-deploying on merge.
-4. **A system design write-up** — architecture decisions and tradeoffs, written to be defended in a technical interview.
-5. **(Stretch) A real-time/concurrent feature** — a systems-engineering signal this project otherwise lacks.
+1. **MLOps / experiment tracking** — instrument the existing A/B pipeline with MLflow or Weights & Biases.
+2. **RAG / vector database** — replace or supplement Annoy with a proper vector database (Pinecone or FAISS); restructure Claude mood-translation as an actual RAG pipeline.
+3. **A defensible deep learning component** — a learned embedding model (PyTorch) replacing the hand-engineered audio features.
+4. **(Stretch) Airflow** — orchestrate the data ingestion/feature pipeline.
 
-Detailed requirements for each are in **Part 3 (Sections 24–28)** at the end of this document. When Sections 1–23 conflict with the pivot (e.g. "Not in scope" listing OAuth, or Success Metrics framed around ML hiring managers), Part 3 and this section take precedence.
+Detailed requirements for each are in **Part 4 (Sections 29–32)** at the end of this document.
+
+**What this means for the rest of this document:** Sections 1–23 (the ML core) remain accurate as a technical reference. **Part 3 (Sections 24–28) is now historical** — read Section 24 (React frontend) as an accurate record of what was built and is being kept; read Sections 25–28 (auth, testing/CI-CD, system design write-up, real-time stretch) as abandoned plans, not work in progress. Anywhere the rest of this document frames the audience, success metrics, or "not in scope" list around SWE recruiting, **Part 4 and this section take precedence.**
 
 ---
 
@@ -39,24 +40,24 @@ The system runs a live A/B experiment comparing two ranking strategies, logs eve
 
 **For users:** Existing music discovery tools require you to already know what you want. You can't tell Spotify "I want something for a late night drive feeling nostalgic" and get back music that actually fits that feeling. This system bridges natural language and audio features using an LLM.
 
-**For Nathan's career:** Demonstrates end-to-end software engineering skills to SWE internship hiring managers — specifically a real frontend, authentication, tested and CI/CD'd backend, and the ability to reason about and defend architecture tradeoffs. The ML pipeline (retrieval → ranking, LLM integration) is the backdrop the SWE work is built on top of, not the pitch itself.
+**For Nathan's career:** Demonstrates production ML engineering skills to DS/ML/Data Analyst internship hiring managers — specifically real experiment tracking, a RAG/vector-search component, an applied deep learning component, and the ability to reason about and defend the existing A/B-tested recommendation pipeline. The React frontend (built during an earlier SWE-focused pivot, see Section 0) is a demo layer, not the pitch itself.
 
 ### Who is it for?
 
 | User | What they do with it |
 |---|---|
-| SWE internship recruiters (startups, with Meta/TikTok as stretch) | View the live URL, read the README, assess product and engineering maturity |
-| SWE hiring managers | Evaluate frontend quality, auth design, test coverage, CI/CD setup, and whether Nathan can explain his own architecture |
-| Nathan (builder) | Close specific SWE skill gaps — frontend, auth, testing, CI/CD, systems design — by building them, not by having them built for him |
-| General users | Sign in, type a mood, get song recommendations, rate them, see their history |
+| DS/ML/Data Analyst internship recruiters | View the live demo, read the README, assess ML engineering maturity — experimentation rigor, not just a working model |
+| DS/ML hiring managers | Evaluate experiment tracking, retrieval/RAG design, applied deep learning work, and whether Nathan can explain his own architecture |
+| Nathan (builder) | Close specific DS/ML skill gaps — MLOps tracking, RAG/vector DB, deep learning, orchestration — by building them, not by having them built for him |
+| General users | Type a mood, get song recommendations, rate them |
 
 ### Jobs to be done
 
 - **As a user**, I want to describe how I'm feeling in plain English and get songs that match that feeling, so I don't have to know the technical name for what I want.
 - **As a user**, I want to understand why each song was recommended, so I can trust the system.
 - **As a user**, I want to rate recommendations so the system can learn what works.
-- **As a recruiter**, I want to see a live deployed URL and a clean README so I can evaluate the project in under 5 minutes.
-- **As a hiring manager**, I want to see production-quality code with tests, CI, and thoughtful architecture decisions documented.
+- **As a recruiter**, I want to see a live demo and a clean README so I can evaluate the project's ML engineering maturity in under 5 minutes.
+- **As a hiring manager**, I want to see real experiment tracking, a retrieval design I can ask about, and evidence of applied deep learning, not just a listed skill.
 
 ---
 
@@ -155,7 +156,7 @@ The ML/recommendation core is considered functionally done. These items are tech
 | Real-time model retraining | Models trained offline; online learning is out of scope — the "real-time" stretch goal (Section 28) is about concurrency/systems engineering, not ML |
 | Payments or subscriptions | Not relevant to portfolio goals |
 | Multi-tenancy | Single-tenant system is sufficient |
-| Further ranking model work (Strategy B tuning, deeper A/B statistical infra) | ML core is considered done; not worth further investment now that the project's focus has shifted to SWE fundamentals |
+| Further ranking model work (Strategy B tuning, deeper A/B statistical infra) | Not scheduled ahead of the Part 4 DS/ML roadmap (MLOps tracking, RAG/vector DB, deep learning, Airflow) — may be revisited after |
 
 Note: streaming responses are no longer categorically out of scope — see the real-time stretch goal in Section 28.
 
@@ -420,16 +421,15 @@ The full project is not done until:
 
 ## 9. Success Metrics
 
-This is a portfolio project for SWE internship recruiting, so success is defined by career outcomes and interview-defensibility, not user metrics or ML performance.
+This is a portfolio project for DS/ML/Data Analyst internship recruiting (see Section 0), so success is defined by career outcomes and interview-defensibility, not raw model performance alone.
 
 | Metric | Target |
 |---|---|
-| Recruiter response rate | At least 1 SWE internship interview request directly attributable to this project |
-| Architecture defensibility | Nathan can confidently explain any decision — frontend, auth, testing, deployment — in a technical interview, not just the ML pieces |
-| Time to explain in interview | Can walk through full architecture, including the system design write-up, in under 10 minutes |
-| Demo reliability | Zero crashes during a live demo, including sign-in and saved-history flows |
-| Code review readiness | Any senior engineer can read any file — frontend or backend — and understand it without asking questions |
-| CI/CD health | Every push runs tests; every merge to main auto-deploys with no manual steps |
+| Recruiter response rate | At least 1 DS/ML/Data Analyst internship interview request directly attributable to this project |
+| Architecture defensibility | Nathan can confidently explain any decision — retrieval design, experiment tracking, the embedding model — in a technical interview, not just that it works |
+| Time to explain in interview | Can walk through the full ML architecture, including the RAG and deep learning components, in under 10 minutes |
+| Demo reliability | Zero crashes during a live demo |
+| Code review readiness | Any DS/ML hiring manager can read any file and understand it without asking questions |
 | GitHub stars | 10+ stars within first month of publishing |
 
 ---
@@ -480,14 +480,17 @@ This is a portfolio project for SWE internship recruiting, so success is defined
 | Containerization | Docker + docker-compose | Docker 25+, Compose v2 | `docker compose up` starts entire stack; production parity from day one |
 | Testing | pytest | 8.x | Industry standard; fixture-based; integrates with httpx for async FastAPI testing |
 | HTTP test client | httpx | 0.27.x | Required for async FastAPI `TestClient`; same API as `requests` |
-| CI/CD | GitHub Actions | — | Native GitHub integration; YAML lives in `.github/workflows/`; 2,000 free minutes/month |
 | Frontend (legacy dashboard) | Streamlit | 1.35.x | Python-only; kept as an internal metrics/demo dashboard, no longer the product-facing UI |
-| Frontend (product UI) | React | 18.x | Real component-based UI — the primary SWE skill gap this project closes; see Section 24 |
-| Frontend tooling | Vite | 5.x | Fast dev server and build; standard modern React setup, simpler than CRA |
-| Frontend HTTP client | fetch / axios | — | Talks to the FastAPI backend; axios if interceptor-based auth token attachment is needed (Section 25) |
-| Auth — tokens | PyJWT | 2.8.x | Issues and verifies JWTs for session auth; see Section 25 for design and rationale |
-| Auth — password hashing | passlib[bcrypt] | 1.7.x | Salts and hashes user passwords before storage — never store plaintext |
+| Frontend (product UI) | React | 18.x | Real component-based UI, built during the earlier SWE-focused pivot (Section 0); complete and frozen, kept as the demo layer |
+| Frontend tooling | Vite | 5.x | Fast dev server and build |
+| Frontend HTTP client | fetch | — | Talks to the FastAPI backend |
+| Experiment tracking | MLflow or Weights & Biases | — | **Not built — Part 4 Priority 1.** Instruments the existing A/B pipeline with run tracking, model versioning, and metrics |
+| Vector search / RAG | Pinecone or FAISS | — | **Not built — Part 4 Priority 2.** Replaces/augments Annoy; restructures mood translation as an actual RAG pipeline |
+| Deep learning | PyTorch | — | **Not built — Part 4 Priority 3.** Learned embedding model replacing the hand-engineered audio features |
+| Orchestration | Airflow | — | **Not built — Part 4 stretch.** Orchestrates the data ingestion/feature pipeline |
 | Deployment | Render | — | Docker-native; free web service + PostgreSQL (90-day free then $7/mo); recruiter-friendly live URL |
+
+**Dropped (see Section 0):** JWT auth (PyJWT + passlib/bcrypt), GitHub Actions CI/CD. These were part of the abandoned SWE-focused pivot and were never implemented — no code depends on them.
 
 ---
 
@@ -947,6 +950,8 @@ services:
       db:
         condition: service_healthy     # wait for Postgres to actually accept connections
     env_file: .env
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/recsys   # overrides .env's @localhost inside Docker's network
     volumes:
       - ./models:/app/models           # mount generated index and model files
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -1153,9 +1158,9 @@ The catch-all 500 handler must be registered in `main.py` using FastAPI's `@app.
 
 ---
 
-# Part 3: SWE Product Roadmap (Current Priority)
+# Part 3: SWE Product Roadmap (Historical — Superseded, See Section 0)
 
-**This is what's actually being worked on now.** Sections 1–23 describe the ML/recommendation core, which is done. This part describes the four things (plus one stretch) that turn Moodify from an ML demo into a resume/interview-defensible SWE product — see Section 0 for why.
+**This part is no longer current.** It documents the first pivot, toward SWE internship recruiting. Of the five items below, only **Section 24 (React frontend) was actually built** — it's kept as the demo layer for the current DS/ML-focused project. **Sections 25–28 (auth, testing/CI-CD, system design write-up, real-time stretch) were never implemented and are not planned** — left here as a record of what was considered at the time, not a roadmap. The current roadmap is **Part 4 (Sections 29–32)**.
 
 ---
 
@@ -1203,6 +1208,8 @@ CSS Modules, one file per component, over a utility framework (Tailwind) or a CS
 
 ## 25. Authentication & User Accounts
 
+> **Status: abandoned, never implemented — see Section 0.** Kept below as a record of the design that was discussed, not a plan.
+
 **Priority 2.** Current auth is a single shared `X-API-Key` per API consumer — it identifies a *client*, not a *user*. There's no login, no session, no per-user history. Real user auth is a baseline expectation for any consumer product pitch.
 
 ### Why JWT, not server-side sessions
@@ -1230,6 +1237,8 @@ The API key models *which client/experiment group*; the JWT models *which human 
 
 ## 26. Testing & CI/CD
 
+> **Status: abandoned, never implemented — see Section 0.**
+
 **Priority 3.** A "production-grade" pitch with zero automated tests and no CI is not credible in a SWE interview. This closes that gap for the whole app — frontend and auth included, not just the recommendation endpoints.
 
 ### Backend testing
@@ -1251,6 +1260,8 @@ On merge to `main`, after CI passes, auto-deploy to Render. Render supports auto
 
 ## 27. System Design Write-Up
 
+> **Status: abandoned, never implemented — see Section 0.**
+
 **Priority 4.** This is the artifact most likely to get read in an interview loop or take-home review before any code does — proof Nathan can reason about tradeoffs, not just implement a spec someone else wrote.
 
 ### Required content (`docs/SYSTEM_DESIGN.md`)
@@ -1265,6 +1276,8 @@ On merge to `main`, after CI passes, auto-deploy to Render. Render supports auto
 
 ## 28. Stretch — Real-Time / Concurrent Feature
 
+> **Status: abandoned, never implemented — see Section 0.**
+
 **Priority 5, sequenced after Sections 24–27, not in parallel.** Nothing in the current system is concurrent or real-time — every request is a synchronous request/response cycle. Systems/concurrency is a distinct signal from "I can build CRUD endpoints," and it's a common probe at consumer/social-product startups.
 
 Pick one, don't build all:
@@ -1272,3 +1285,84 @@ Pick one, don't build all:
 - **Streamed recommendation explanations** — stream each of the 10 Claude explanations back to the client as it's generated (SSE or WebSocket) instead of waiting for the full batch. Directly revisits the existing "batch all 10 in one call" decision in `explainer.py` (Section 17) and produces a concrete streaming-vs-batching tradeoff story.
 - **Live experiment metrics** — push updated A/B metrics to the dashboard via WebSocket as feedback arrives, instead of polling `/experiments/results`.
 - **Concurrency under load (lower-scope option)** — load-test the API (`locust` or `hey`), then tune and document concurrency behavior (Uvicorn workers, async DB session handling), producing real numbers for the Section 27 scaling discussion instead of speculation.
+
+---
+
+---
+
+# Part 4: DS/ML Roadmap (Current Priority — See Section 0)
+
+**This is what's actually being worked on now.** Sections 1–23 describe the ML/recommendation core, which is done and stays as the foundation. Part 3 (Sections 24–28) is historical. This part describes the four things (three plus one stretch) that close the specific DS/ML skill gaps identified from current internship postings — see Section 0 for why.
+
+---
+
+## 29. MLOps / Experiment Tracking
+
+**Priority 1.** The project already runs a real experiment (Strategy A vs. Strategy B, MD5 bucketing, `recommendation_logs` + `feedback`) — but nothing about it is tracked the way an ML team would track it. There's no run history, no model versioning, no metrics dashboard beyond the ad-hoc `/experiments/results` design. This is the fastest, lowest-lift gap to close because the experimentation infrastructure already exists; this just formalizes it.
+
+### Why MLflow or Weights & Biases, not a hand-rolled logging table
+`recommendation_logs` already logs *requests*. What it doesn't do is track *runs* — a distinct concept: each time the ranking logic, the feature set, or the mood-translation prompt changes, that's a new run worth comparing against prior ones on the same metrics. Hand-rolling this (more columns on `recommendation_logs`) reinvents a wheel that recruiters specifically look for by name. MLflow is self-hostable and free (no vendor lock-in for a portfolio project); Weights & Biases has a nicer hosted dashboard UI that's easier to screenshot for a resume/README. Either is defensible — pick one and be able to say why.
+
+### What gets tracked
+- **Runs:** one per meaningfully different configuration (e.g. "Strategy A baseline," "Strategy A + popularity reweighted," any future Strategy B attempt).
+- **Parameters logged per run:** ranking strategy used, feature set/weights, Annoy `n_trees`, candidate pool size (currently 500).
+- **Metrics logged per run:** feedback rate (from the existing `feedback` table), request latency, and whatever the A/B significance check (Section 18) produces.
+- **Artifacts:** the actual model/scaler files (`models/scaler.pkl`, `models/annoy_index.ann`) versioned per run, so "which index was live when this feedback came in" is answerable later.
+
+### Decisions made so far (implementation status)
+- **Tool: MLflow** (open source, self-hosted, generalist-DS association). W&B is hosted with a more polished UI but a more ML-research flavor. Pinned `mlflow==3.16.1` — 2.19.0 requires `pandas<3`, conflicting with `pandas==3.0.2`; the core API (`start_run`, `log_param`, `log_metric`, `log_artifact`) is the same in 2.x and 3.x.
+- **Run definition:** a run is one distinct pipeline configuration, not a request. Real knobs: Annoy `n_trees` (50, build-time), features included in the 9-feature vector, popularity target (75, hardcoded in the mood flow), candidate pool size (`n=500`, query-time). No config object exists yet; consolidating these is a prerequisite for clean `log_param`.
+- **Fixed eval set** (`scripts/eval_queries.py`): 6 `MoodQuery` + 6 `TrackQuery` frozen dataclasses, chosen for coverage of the valence/energy quadrants plus speechiness and instrumentalness/acousticness. The exact set is logged as an artifact per run for reproducibility.
+- **Metrics** (`scripts/evaluate_pipeline.py`, built and running): average top-10 cosine similarity, latency (`time.perf_counter()` around `get_candidates` + `ranker_a` only — excludes the Claude call and seed lookup), average popularity of the top 10 — each for mood and track queries, returned as a frozen `EvalMetrics`. Caveats: similarity saturates near 1.0 and is not comparable across feature-set changes; latency is noisy; average popularity is the hypothesis-matched metric for the planned popularity change. Track mode uses the seed's own popularity in its query vector while mood mode hardcodes 75 (a known confound).
+- **Planned run 2:** decouple popularity from the similarity vector and use it as a post-retrieval boost/filter; compare to baseline on average popularity.
+- **Remaining:** wire the MLflow calls (params, 6 metrics, artifacts `scaler.pkl` / `annoy_index.ann` / eval set), consolidate config, verify two runs in the UI.
+
+### Integration points
+This sits alongside the existing pipeline, not inside the request path — tracking calls happen in the offline scripts (`scripts/build_index.py`, a future retraining script) and optionally as a lightweight log call in `main.py` when a request completes, not blocking the response (same non-blocking-write principle already used for `recommendation_logs`).
+
+**Definition of done:** at least two distinct runs logged and comparable side-by-side in the MLflow/W&B UI, with parameters, metrics, and the underlying model artifact all captured per run. Nathan can explain what a "run" is, why it's different from a request log, and walk through the UI live.
+
+---
+
+## 30. RAG / Vector Database
+
+**Priority 2.** The single most repeated ask across current DS/ML/MLE postings. Today, `mood.py` uses Claude as a one-shot feature translator (mood string → 8 floats) with no retrieval step at all, and Annoy performs pure vector similarity search with no notion of semantic/text-based retrieval. Neither is a RAG pipeline in the sense the postings mean.
+
+### What changes
+Restructure the mood flow so Claude's mood translation is grounded in retrieved context rather than working from the mood string alone: embed track metadata (name, artist, and/or a generated text description of its audio-feature profile) into a vector database, retrieve semantically relevant tracks/context for a given mood string, and feed that retrieved context into the Claude call that produces the final feature targets or the ranked shortlist. This is a real retrieval-augmented pattern, not just a rename of the existing Annoy step.
+
+### Why Pinecone vs. FAISS
+Pinecone is a managed, hosted vector DB — zero infra to run, free tier, and the more common "resume keyword" since it shows up by name in most RAG-tooling job postings. FAISS is a library, not a service — self-hosted, more control, no ongoing account/quota to manage, and pairs naturally with the fact that Annoy (also self-hosted, in-process) is already the existing pattern in this codebase. Either is defensible; Pinecone leans toward "I can integrate a managed ML service," FAISS leans toward "I understand what a vector DB is doing under the hood." Pick based on which story matters more.
+
+### Relationship to the existing Annoy index
+Annoy is Spotify-built and does one thing well: fast approximate nearest-neighbor search over the existing 9-dimensional numeric audio-feature vectors. The new vector DB does a different thing: semantic search over *text* embeddings (mood descriptions, track descriptions). These aren't redundant — worth being able to explain them as two different retrieval mechanisms serving two different stages, not one replacing the other outright, unless the design ends up fully replacing Annoy (a decision to make once the RAG design is concrete).
+
+**Definition of done:** a mood query retrieves relevant context from the vector DB before Claude produces feature targets or a final ranked list, and Nathan can draw the before/after request flow diagram and explain what retrieval step was added and why it improves on pure one-shot translation.
+
+---
+
+## 31. Deep Learning — Learned Embedding Model
+
+**Priority 3.** The resume lists PyTorch; every project on it is classical ML (cosine similarity, regression-style ranking). This is the credibility gap that shows up the moment an interviewer asks "walk me through a model you built with it" — takes the longest of the four items, but closes the biggest gap.
+
+### What gets built
+A learned embedding model (PyTorch) that replaces the hand-engineered 9-feature vector (Section 22) with a learned representation — e.g., a small autoencoder or a two-tower model trained so that tracks which co-occur in positive feedback end up closer together in embedding space than the raw audio features alone would place them.
+
+### Why this, not a bigger/flashier model
+The goal is a real, explainable, correctly-evaluated model — not the most complex one. A small autoencoder or two-tower architecture is honestly explainable end-to-end (what goes in, what the loss function optimizes, why the embedding space means what it claims to mean), which matters more for interview defensibility than model size.
+
+### Evaluation
+Compare retrieval quality (e.g. NDCG@10, or simpler proxy metrics against the existing feedback data) using the learned embeddings vs. the current hand-engineered vector, on the same candidate pool. A model that isn't measurably compared against the baseline it replaces isn't a finished story.
+
+**Definition of done:** a trained PyTorch model, a documented training process (data, loss, evaluation), and a real comparison number against the hand-engineered baseline it replaces. Nathan can explain the architecture, the loss function, and why the evaluation metric is the right one, without notes.
+
+---
+
+## 32. Stretch — Airflow Orchestration
+
+**Priority 4, after Sections 29–31, not in parallel.** The data pipeline (`scripts/seed_catalog.py` → `scripts/build_index.py`) currently runs manually, in order, by hand. This is the lowest-priority item — orchestration signals production data engineering maturity, but the earlier three items close bigger, more frequently-requested gaps first.
+
+### What gets built
+An Airflow DAG that runs the existing scripts as ordered tasks (catalog seeding → index building → optionally the new embedding-model training step from Section 31), with real dependency edges, so the DAG — not a person — decides ordering and re-run behavior on failure.
+
+**Definition of done:** the DAG runs end-to-end in a local Airflow instance, showing the correct task dependency graph, and Nathan can explain what orchestration adds over a shell script that just calls the two scripts in sequence.

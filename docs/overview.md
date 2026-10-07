@@ -5,49 +5,47 @@
 - Name: Nathan Nguyen
 - Student: Data Science major at UC San Diego, GPA 3.9, graduating June 2027
 - Current: NREIP data engineering internship (SQL pipelines, Azure SQL)
-- Goal: Software Engineering internship at a startup, with consumer tech companies like Meta/TikTok as stretch targets — **not** an ML/DS role
+- Goal: Data Science, Data Analyst, or Machine Learning internship for Summer 2027 — most of my existing skills already sit in this track
 - Experience: Python, Flask, FastAPI, SQL, PostgreSQL, Google Cloud Run, Firestore, scikit-learn, pandas, numpy
-- Gaps I'm closing with this project now: a real React frontend, user auth (JWT/sessions), testing + CI/CD, a system design write-up, and — as a stretch — a real-time/concurrent feature
+- Gaps I'm closing with this project now (from a gap analysis against current DS/ML/MLE postings): MLOps/experiment tracking, a real RAG/vector-database component, an applied deep learning component, and — as a stretch — Airflow orchestration
 
 ---
 
-## Project Evolution — Why the Pivot
+## Project Evolution — Why the Pivot (Twice)
 
-This project started as a two-stage retrieval-ranking recommendation pipeline, and that ML core is now done: Annoy-based retrieval, cosine-similarity ranking, Claude-based mood translation and explanation generation, and a deterministic A/B testing framework (MD5 bucketing, request logging, feedback collection, Streamlit metrics dashboard).
+This project started as a two-stage retrieval-ranking recommendation pipeline, and that ML core is done: Annoy-based retrieval, cosine-similarity ranking, Claude-based mood translation and explanation generation, and a deterministic A/B testing framework (MD5 bucketing, request logging, feedback collection, Streamlit metrics dashboard).
 
-I originally leaned toward an "ML" career identity because I'm good at math and it seemed like the obvious path. After reflecting on it, my actual strengths and interests point toward product/application software engineering: I do my best work on well-scoped, correctness-driven problems, I want to build things that end up in front of real users, and open-ended data cleaning and ambiguous ML experimentation is draining rather than energizing for me.
+**Pivot 1 (historical):** I originally leaned toward an "ML" career identity because I'm good at math and it seemed like the obvious path, then reconsidered and pivoted this project toward SWE internship recruiting — closing gaps like a React frontend, auth, testing/CI-CD, and a system design write-up. Of that list, only the **React frontend actually got built** (mood + track-search flows, fully styled). Auth, testing/CI-CD, and the system design write-up were never implemented.
 
-**So the ML/recommendation core is done and is not the focus going forward.** The goal now is to turn Moodify into a complete SWE product by closing specific skill gaps, in this priority order:
+**Pivot 2 (current):** my actual goal is a Data Science, Data Analyst, or Machine Learning internship for Summer 2027 — most of my existing skills already sit in this track, and I want this project to reflect that. A gap analysis against current DS/ML/MLE internship postings surfaced concrete, specific gaps: no MLOps/experiment tracking, no RAG/vector-database work, no applied deep learning project despite listing PyTorch as a skill. **The ML core stays as the foundation, the React frontend stays as a finished demo layer (no further frontend work), and engineering effort now goes into closing those DS/ML gaps**, in this priority order:
 
-1. A real React frontend (in place — search and results are built and styled; auth-dependent pages still to come)
-2. User accounts and auth (JWT/sessions), with saved history and feedback tied to real users
-3. Testing (pytest unit + integration) and CI/CD (GitHub Actions: test on push, auto-deploy on merge)
-4. A system design write-up explaining architecture decisions and tradeoffs
-5. (Stretch) A real-time/concurrent feature — a systems-engineering signal this project otherwise lacks
+1. MLOps / experiment tracking — instrument the existing A/B pipeline with MLflow or Weights & Biases
+2. A real RAG / vector database component — replace or supplement Annoy with Pinecone or FAISS; restructure Claude mood translation as an actual RAG pipeline
+3. A defensible deep learning component — a learned embedding model (PyTorch) replacing the hand-engineered audio features
+4. (Stretch) Airflow orchestration for the data ingestion/feature pipeline
 
-Full detail on each of these lives in `docs/project_spec.md`, Part 3 (Sections 24–28).
+Full detail on each of these lives in `docs/project_spec.md`, Part 4 (Sections 29–32). Part 3 (Sections 24–28) documents the abandoned SWE-focused pivot — Section 24 (React frontend) is an accurate record of what was built and kept; Sections 25–28 are not being pursued.
 
-**How I want Claude to help:** prioritize teaching the underlying SWE fundamentals while building — not just producing working code. I dislike "vibe coding" parts I don't understand, so explain the *why* behind frontend/auth/testing patterns as we go. Treat this as a resume/interview-defensible project: I should be able to confidently explain any architectural decision in a technical interview.
+**How I want Claude to help:** prioritize teaching the underlying DS/ML/MLOps fundamentals while building — not just producing working code. I dislike "vibe coding" parts I don't understand, so explain the *why* behind experiment-tracking, RAG/vector-search, and embedding-model patterns as we go. Treat this as a resume/interview-defensible project: I should be able to confidently explain any architectural decision in a technical interview.
 
 ---
 
 ## What This Project Is
 
-A full-stack music recommendation product with three things that made the ML core unique, plus a product layer now being built on top of it:
+A full-stack music recommendation product built around three things that made the ML core unique, now being extended with production ML engineering depth:
 
 1. **Natural language mood input** — user types "late night drive feeling nostalgic", Claude translates it into audio feature targets, system returns matching songs
 2. **Explainability** — every recommendation includes a plain English explanation of why it fits the mood
 3. **A/B testing framework** — two ranking strategies run in parallel, every request is logged, live metrics compare which strategy performs better (backend infrastructure exists; see Current Status)
 
-The ML pipeline above is the backdrop, not the pitch. The pitch, going forward, is a complete SWE product: a real React frontend, real user accounts and auth, a tested and CI/CD'd backend, and an architecture Nathan can defend in an interview — built to demonstrate software engineering skill to SWE internship interviewers, not ML engineering skill to ML hiring managers.
+The pitch, going forward, is production ML engineering maturity built on top of that pipeline: real experiment tracking, a RAG-based retrieval component, and an applied deep learning component — demoed through the existing React frontend, but the frontend itself isn't the pitch. This is built to demonstrate ML engineering skill to DS/ML/Data Analyst internship interviewers.
 
 ---
 
 ## Career Context
 
-**Target role:** Software Engineering Intern — startups, product/application engineering  
-**Stretch target companies:** Meta, TikTok, and other consumer tech companies (as stretch, not primary targets)  
-**Why this project now:** the ML/recommendation core is done. What's left — frontend, auth, testing, CI/CD, systems design — is exactly the SWE skill set this project didn't previously demonstrate, and exactly what SWE internship interviewers actually probe for.
+**Target role:** Data Science / Data Analyst / Machine Learning Intern — Summer 2027  
+**Why this project now:** the ML core (retrieval, ranking, LLM integration, A/B testing) is done, but doesn't yet demonstrate the specific tooling and depth DS/ML/MLE postings actually ask for — experiment tracking, RAG/vector search, and applied deep learning. Closing those gaps on top of an already-working, already-interesting recommendation system is faster and more credible than starting a new project from scratch.
 
 ---
 
@@ -56,13 +54,12 @@ The ML pipeline above is the backdrop, not the pitch. The pitch, going forward, 
 | Layer | Tool | Purpose |
 |---|---|---|
 | Frontend (legacy) | Streamlit | Internal metrics/demo dashboard — no longer the product-facing UI |
-| Frontend (product) | React + Vite + TypeScript, CSS Modules | Real product UI — top priority, pre-auth scope complete: both mood and track-search flows working end-to-end (loading/error/validation states) and fully styled. Auth pages, routing, and history are blocked on Priority 2; see Project Evolution above |
-| Auth | JWT (PyJWT) + passlib/bcrypt | User accounts, sessions, saved history — see project_spec.md Section 25 |
+| Frontend (product) | React + Vite + TypeScript, CSS Modules | Complete and frozen — both mood and track-search flows working end-to-end, fully styled. Built during the earlier SWE pivot; kept as the demo layer, no further work planned; see Project Evolution above |
 | API framework | FastAPI | Main API layer |
 | Validation | Pydantic | Request/response schemas |
 | Rate limiting | slowapi | Max 10 req/min per IP |
-| Auth | Custom middleware | API key validation |
-| ML — similarity | Annoy | ANN index for fast track retrieval |
+| Auth | Custom middleware (API key only) | API key validation — JWT user auth was explored and abandoned, see Project Evolution |
+| ML — similarity | Annoy | ANN index for fast track retrieval — candidate for replacement/augmentation by a vector DB |
 | ML — ranking | numpy | Strategy A ranker (cosine similarity); Strategy B not built |
 | LLM | Anthropic SDK (claude-sonnet-4-20250514) | Mood translation + explanations |
 | Feature processing | numpy, pandas | Audio feature vectors |
@@ -71,8 +68,11 @@ The ML pipeline above is the backdrop, not the pitch. The pitch, going forward, 
 | Migrations | Alembic | Schema version control |
 | Spotify client | spotipy | Spotify API wrapper |
 | Containerization | Docker + docker-compose | Run everything with one command |
-| Testing | pytest + httpx | API and unit tests |
-| CI/CD | GitHub Actions | Run tests on every push |
+| Testing | pytest + httpx | API and unit tests (not currently being expanded) |
+| Experiment tracking | MLflow (chosen over W&B) | Installed (`mlflow==3.16.1`); eval harness built, tracking calls not yet wired — current Priority 1, see Current Status |
+| Vector search / RAG | Pinecone or FAISS | Not yet built — current Priority 2 |
+| Deep learning | PyTorch | Not yet built — current Priority 3, learned embedding model |
+| Orchestration | Airflow | Not yet built — current stretch priority |
 | Deployment | Render | Free cloud hosting |
 
 ---
@@ -130,9 +130,10 @@ spotify-song-recommender/
 
 Planned, not yet created (see Next steps below):
   app/experiment.py          # A/B assignment + metrics — currently inlined in main.py, not extracted
-  frontend-react/            # React product UI — Priority 1, not yet scaffolded
-  .github/workflows/ci.yml   # GitHub Actions CI — Priority 3, not yet created
-  tests/test_experiment.py, tests/test_mood.py  # part of the Priority 3 test suite
+  MLflow tracking calls      # wrapping scripts/evaluate_pipeline.py in mlflow runs — current Priority 1 (MLflow chosen over W&B)
+  vector DB / RAG component  # Pinecone or FAISS, replacing/augmenting Annoy — current Priority 2
+  learned embedding model    # PyTorch, replacing hand-engineered audio features — current Priority 3
+  Airflow DAG                # orchestrating the data pipeline — current stretch priority
 ```
 
 ---
@@ -317,11 +318,11 @@ Keep explanations under 30 words. Batch all 10 tracks in one API call using a li
 SPOTIFY_CLIENT_ID=your_client_id
 SPOTIFY_CLIENT_SECRET=your_client_secret
 ANTHROPIC_API_KEY=your_key
-DATABASE_URL=postgresql://postgres:password@db:5432/recsys
+DATABASE_URL=postgresql://postgres:password@localhost:5432/recsys
 API_KEY=supersecretkey123
 ```
 
-Note: `DATABASE_URL` uses `@db` as host when running inside Docker. Use `@localhost` when running outside Docker for local testing.
+Note: `.env` uses `@localhost` so scripts, alembic, and `psql` work directly from your machine. The `app` service in `docker-compose.yml` overrides `DATABASE_URL` to `@db` (Docker's internal hostname) via its `environment:` block, which takes precedence over `env_file`. Render sets its own `DATABASE_URL` in `render.yaml`.
 
 ---
 
@@ -425,7 +426,7 @@ Completed:
 - Render deployment prep — complete (repo-side): render.yaml Blueprint (API web service + free Postgres, DATABASE_URL auto-wired, ANTHROPIC_API_KEY as manual secret); Dockerfile CMD honors Render's $PORT; app/database.py normalizes postgres:// → postgresql:// and fails clearly if DATABASE_URL is unset; models/ artifacts un-ignored and committed so the API loads them at startup; frontend reads API_BASE/API_KEY from Streamlit secrets with localhost fallback. Remaining (manual): provision on Render, seed the prod DB from local, set ANTHROPIC_API_KEY, deploy frontend to Streamlit Community Cloud. Full runbook in PROJECT_SPEC Section 21.
 - app/main.py — updated: added `CORSMiddleware` (`allow_origins=["http://localhost:5173"]`) so the Vite dev server's requests aren't blocked. Without it the browser's automatic `OPTIONS` preflight got a 405 (no OPTIONS route existed) and the real POST never ran.
 
-**React frontend (Priority 1 — pre-auth scope complete):**
+**React frontend (complete, frozen — built during the earlier SWE pivot, kept as the demo layer):**
 - frontend-react/ — scaffolded with Vite + React + TypeScript. Styling via CSS Modules, one colocated `.module.css` per component.
 - Components — `Heading`, `ModeToggle`, `SearchForm`, `SongCard`, `ResultsList`, composed in `App`. Built static-first (hardcoded data, no state), then wired with real state one piece at a time.
 - State — `mode` ("mood" | "track") is lifted to `App` because both `ModeToggle` and `SearchForm` need it; `query` stays local to `SearchForm` as a controlled input. `App` also holds `songs`, `strategy`, `hasSearched`, `isLoading`, and `error`. Callbacks follow the `onX` (prop) / `handleX` (implementation) naming convention.
@@ -437,20 +438,22 @@ Completed:
 - Accessibility — one global `:focus-visible` ring, `aria-pressed` on the mode toggle, `role="meter"` + `aria-valuenow` on the similarity bar, autocomplete rows as real `<button>`s (previously `onClick` on an `<li>`, which was mouse-only), and a `prefers-reduced-motion` block that drops all animation.
 - Two behaviour fixes made during the styling pass, both in `SearchForm`: editing the input after picking a suggestion now clears `selectedTrackId` (it previously kept submitting the old track's ID while showing different text), and dropdown visibility is now derived at render time instead of being cleared inside the effect — which removed a cascading re-render flagged by `eslint-plugin-react-hooks` and stopped the dropdown reopening 300ms after each selection.
 - Verified — `npm run build` (tsc + vite) and `npm run lint` both pass clean.
-- **Known temporary gap:** the frontend authenticates to `/recommend/*` with a dev API key read from `frontend-react/.env` (`VITE_API_KEY`, gitignored). This is an explicitly called-out violation of "never expose API keys client-side", acceptable only for local-only dev traffic, and is resolved once Priority 2 (JWT auth) gives the frontend a per-user session token instead of a static shared key.
+- **Known gap, not being resolved:** the frontend authenticates to `/recommend/*` with a dev API key read from `frontend-react/.env` (`VITE_API_KEY`, gitignored). This is an explicitly called-out violation of "never expose API keys client-side", acceptable only for local-only dev traffic on a frozen demo frontend. Auth work to fix this properly was explored and abandoned when the project pivoted back to DS/ML (see Project Evolution) — if this frontend is ever put in front of real users, this needs revisiting first.
 
 In progress:
-- Nothing actively in progress. The React frontend's pre-auth scope is done; the rest of it (routing, login/signup, history page, auth-aware nav) is blocked on Priority 2 landing first.
-- The styling has not yet been reviewed in a browser by Nathan — it's verified by a clean tsc/vite/eslint run, not by a screenshot.
+- Nothing actively in progress. The React frontend is feature- and styling-complete and frozen — no further frontend work planned. JWT auth work that was briefly started (users table design, `/auth/*` endpoint contracts) was abandoned, unimplemented, when the project pivoted back to DS/ML.
+- MLOps / experiment tracking (Priority 1) is underway. Built: a fixed evaluation set (`scripts/eval_queries.py` — 6 mood strings + 6 seed tracks covering the valence/energy quadrants, high speechiness, and high instrumentalness/acousticness) and an offline harness (`scripts/evaluate_pipeline.py`) reporting average top-10 similarity, latency, and average popularity for mood and track queries. Not yet built: the MLflow tracking calls, and a single config object for the scattered knobs (`n_trees=50`, candidate pool `n=500`, popularity target 75, feature list). Small pending cleanups in `evaluate_pipeline.py` (module docstring, inline the aggregation to get under the 40-line limit, consistent naming).
+- Baseline (before the popularity metric was added): similarity ≈ 0.997 mood / 0.993 track, latency ≈ 0.069–0.070 s. Caveats: cosine similarity saturates near 1.0 and isn't comparable across runs that change the feature set; latency is noisy; track mode includes the seed's own popularity in the query vector while mood mode hardcodes 75.
+- RAG/vector DB, deep learning component, and Airflow have not yet been started.
+- The frontend styling has not yet been reviewed in a browser by Nathan — it's verified by a clean tsc/vite/eslint run, not by a screenshot.
 
-**ML v2 backlog (not currently prioritized):** POST /feedback endpoint, GET /experiments/results, Strategy B LightGBM ranker, A/B assignment wired to real group (currently hardcoded to "A"). These are accurate gaps in the ML core but are deliberately not being worked on — see Project Evolution above. Full detail in `docs/project_spec.md` Section 3.
+**ML v2 backlog (not currently scheduled ahead of the roadmap below):** POST /feedback endpoint, GET /experiments/results, Strategy B LightGBM ranker, A/B assignment wired to real group (currently hardcoded to "A"). Full detail in `docs/project_spec.md` Section 3.
 
-**Next steps (current priority, in order) — see `docs/project_spec.md` Part 3 for full detail on each:**
-1. React frontend (Section 24) — search and results views are built and styled; remaining: `react-router`, auth pages, history page, and auth-aware nav, all of which depend on Priority 2 landing first
-2. Auth & user accounts (Section 25) — JWT access/refresh tokens, bcrypt password hashing, `users` table, `/auth/*` endpoints, nullable `user_id` on `recommendation_logs` and `feedback`
-3. Testing + CI/CD (Section 26) — pytest unit + integration tests (backend), component tests (frontend, stretch), GitHub Actions running tests on push and auto-deploying on merge to main
-4. System design write-up (Section 27) — `docs/SYSTEM_DESIGN.md` covering architecture, explicit tradeoffs, scaling discussion, and known limitations
-5. (Stretch) Real-time/concurrent feature (Section 28) — streamed explanations, live experiment metrics, or documented concurrency/load testing
+**Next steps (current priority, in order) — see `docs/project_spec.md` Part 4 for full detail on each:**
+1. MLOps / experiment tracking (Section 29) — MLflow: finish eval-harness cleanups and record the baseline, wrap the `evaluate_*` calls in `mlflow.start_run()` (params, 6 metrics, artifacts), consolidate config, verify two comparable runs in the UI (planned run 2: decouple popularity from the similarity vector, compare on average popularity)
+2. RAG / vector database (Section 30) — replace or supplement Annoy with Pinecone or FAISS; restructure Claude mood translation as an actual RAG pipeline
+3. Deep learning component (Section 31) — a learned embedding model (PyTorch) replacing the hand-engineered audio features, evaluated against that baseline
+4. (Stretch) Airflow orchestration (Section 32) — orchestrate the data ingestion/feature pipeline instead of running the scripts manually
 
 ---
 
@@ -466,7 +469,11 @@ In progress:
 
 **Cold start** — what happens when a new user has no history. Handle by falling back to mood-only recommendation without personalization.
 
-**JWT (JSON Web Token)** — a signed, stateless token proving who a user is without the server storing session state. An access token (short-lived) authorizes requests; a refresh token (longer-lived, httpOnly cookie) is used to get a new access token without re-logging-in. See project_spec.md Section 25.
+**JWT (JSON Web Token)** — a signed, stateless token proving who a user is without the server storing session state. An access token (short-lived) authorizes requests; a refresh token (longer-lived, httpOnly cookie) is used to get a new access token without re-logging-in. Not implemented in this project — this was explored during the abandoned auth pivot (project_spec.md Section 25) and kept here only as a concept reference.
+
+**MLOps / experiment tracking** — logging not just requests but *runs*: each meaningfully different model/config version, with its parameters, metrics, and artifacts captured so runs can be compared later. Different from the existing `recommendation_logs` table, which logs individual requests, not model versions. See project_spec.md Section 29.
+
+**RAG (Retrieval-Augmented Generation)** — grounding an LLM call in retrieved context (from a vector database) rather than letting it answer from the prompt alone. See project_spec.md Section 30.
 
 **CI (Continuous Integration)** — automatically running the test suite on every push, so broken code is caught before it merges, not after it deploys.
 
