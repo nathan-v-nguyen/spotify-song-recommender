@@ -144,10 +144,10 @@ if __name__ == "__main__":
   EXPERIMENT_NAME = "moodify-pipeline"
   INDEX_PATH = "models/annoy_index.ann"
 
-  RUN_NAME = "baseline"
-  POPULARITY_WEIGHT = "N/A"
-  POPULARITY_TARGET = 75
-  RANKER = ranker_a
+  RUN_NAME = "boost-w0.05"
+  POPULARITY_WEIGHT = 0.05
+  POPULARITY_TARGET = "N/A"
+  RANKER = partial(ranker_b, popularity_weight=POPULARITY_WEIGHT)
   
 
   mlflow.set_experiment(EXPERIMENT_NAME)
@@ -159,7 +159,7 @@ if __name__ == "__main__":
     mlflow.log_param("popularity_target", POPULARITY_TARGET)
     mlflow.log_param("candidate_pool_size", 500)
     mlflow.log_param("index_hash", index_hash)
-    mlflow.log_param("ranker", "A")
+    mlflow.log_param("ranker", "B")
     mlflow.log_param("popularity_weight", POPULARITY_WEIGHT)
 
     mlflow.log_artifact("models/scaler.pkl")
