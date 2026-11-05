@@ -5,6 +5,9 @@ import logging
 from anthropic import Anthropic
 import json
 from app.models import Track
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 client = Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))

@@ -1,6 +1,9 @@
 import os
 from anthropic import Anthropic
 import json
+from dotenv import load_dotenv
+
+load_dotenv()
 
 client = Anthropic(api_key = os.environ.get("ANTHROPIC_API_KEY"))
 

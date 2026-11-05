@@ -1,0 +1,62 @@
+{
+  "loud gym music with lots of energy, feeling good, ready to go": {
+    "energy": 0.9,
+    "valence": 0.8,
+    "danceability": 0.85,
+    "tempo": 130.0,
+    "acousticness": 0.1,
+    "instrumentalness": 0.3,
+    "loudness": -3.0,
+    "speechiness": 0.1
+  },
+  "calm happy late night studying music": {
+    "energy": 0.35,
+    "valence": 0.65,
+    "danceability": 0.25,
+    "tempo": 85.0,
+    "acousticness": 0.55,
+    "instrumentalness": 0.75,
+    "loudness": -12.0,
+    "speechiness": 0.05
+  },
+  "sad songs for crying": {
+    "energy": 0.2,
+    "valence": 0.15,
+    "danceability": 0.1,
+    "tempo": 70.0,
+    "acousticness": 0.6,
+    "instrumentalness": 0.1,
+    "loudness": -8.0,
+    "speechiness": 0.05
+  },
+  "fast music for when im angry": {
+    "energy": 0.9,
+    "valence": 0.2,
+    "danceability": 0.7,
+    "tempo": 160.0,
+    "acousticness": 0.1,
+    "instrumentalness": 0.3,
+    "loudness": -3.0,
+    "speechiness": 0.1
+  },
+  "rap song": {
+    "energy": 0.8,
+    "valence": 0.6,
+    "danceability": 0.8,
+    "tempo": 95.0,
+    "acousticness": 0.1,
+    "instrumentalness": 0.05,
+    "loudness": -5.0,
+    "speechiness": 0.8
+  },
+  "instrumental acoustic music": {
+    "energy": 0.4,
+    "valence": 0.6,
+    "danceability": 0.2,
+    "tempo": 90.0,
+    "acousticness": 0.9,
+    "instrumentalness": 0.95,
+    "loudness": -12.0,
+    "speechiness": 0.0
+  }
+}

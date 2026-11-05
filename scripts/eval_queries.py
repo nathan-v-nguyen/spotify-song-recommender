@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 
 
+FEATURE_ORDER = ["energy", "valence", "danceability", "tempo", "acousticness", "instrumentalness", "loudness", "speechiness"]
+
 @dataclass(frozen=True)
 class MoodQuery:
     """A mood-string test query and the region of the audio-feature space it's meant to exercise."""
