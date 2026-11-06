@@ -144,8 +144,8 @@ if __name__ == "__main__":
   EXPERIMENT_NAME = "moodify-pipeline"
   INDEX_PATH = "models/annoy_index.ann"
 
-  RUN_NAME = "boost-w0.05"
-  POPULARITY_WEIGHT = 0.05
+  RUN_NAME = "boost-w0.1"
+  POPULARITY_WEIGHT = 0.1
   POPULARITY_TARGET = "N/A"
   RANKER = partial(ranker_b, popularity_weight=POPULARITY_WEIGHT)
   
