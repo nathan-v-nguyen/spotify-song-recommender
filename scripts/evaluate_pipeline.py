@@ -1,19 +1,19 @@
 """Offline evaluation harness — measures similarity, latency, and popularity over the fixed eval query set."""
 
+import argparse
 import hashlib
 import time
 from dataclasses import dataclass
 from statistics import mean
 import mlflow
 import json
-from functools import partial
 from typing import Callable
 
-from app.ranker import ranker_a, ranker_b
 from app.recommender import get_candidates, track_to_vector
 from app.models import Track
 
 from scripts.eval_queries import MOOD_QUERIES, MoodQuery, TRACK_QUERIES, TrackQuery, FEATURE_ORDER
+from scripts.run_config import RUNS, RunConfig, build_ranker, config_params
 
 from app.database import SessionLocal
 
@@ -36,7 +36,13 @@ def load_frozen_features(path: str) -> dict[str, dict[str, float]]:
   with open(path) as f:
     return json.load(f)
 
-def evaluate_mood_queries(mood_queries: list[MoodQuery], ranker: Callable, frozen_features: dict[str, dict[str, float]]) -> EvalMetrics:
+def evaluate_mood_queries(
+  mood_queries: list[MoodQuery],
+  ranker: Callable,
+  frozen_features: dict[str, dict[str, float]],
+  popularity_target: int,
+  candidate_pool_size: int,
+) -> EvalMetrics:
   ''' Measures latency, average similarity, and average popularity scores across evaluation mood queries '''
   db = SessionLocal()
 
@@ -46,11 +52,11 @@ def evaluate_mood_queries(mood_queries: list[MoodQuery], ranker: Callable, froze
     popularity_scores = []
     for mood_query in mood_queries:
       features = frozen_features[mood_query.mood_string]
-      query_vector = [features[k] for k in FEATURE_ORDER] + [75] # popularity
+      query_vector = [features[k] for k in FEATURE_ORDER] + [popularity_target]
 
       start = time.perf_counter()
 
-      candidates = get_candidates(query_vector)
+      candidates = get_candidates(query_vector, n=candidate_pool_size)
       recommendations = ranker(query_vector, candidates, db)
 
       elapsed = time.perf_counter() - start
@@ -76,7 +82,7 @@ def evaluate_mood_queries(mood_queries: list[MoodQuery], ranker: Callable, froze
     db.close()
 
 
-def evaluate_track_queries(track_queries: list[TrackQuery], ranker: Callable) -> EvalMetrics:
+def evaluate_track_queries(track_queries: list[TrackQuery], ranker: Callable, candidate_pool_size: int) -> EvalMetrics:
   ''' Measures latency, average similarity, and average popularity scores across evaluation track queries '''
   db = SessionLocal()
 
@@ -96,7 +102,7 @@ def evaluate_track_queries(track_queries: list[TrackQuery], ranker: Callable) ->
 
       start = time.perf_counter()
 
-      candidates = get_candidates(query_vector)
+      candidates = get_candidates(query_vector, n=candidate_pool_size)
       recommendations = ranker(query_vector, candidates, db)
 
       elapsed = time.perf_counter() - start
@@ -138,49 +144,49 @@ def index_already_logged(experiment_name: str, index_hash: str) -> bool:
   return not previous_runs.empty
 
 
-if __name__ == "__main__":
-  frozen_features = load_frozen_features('scripts/eval_mood_features.json')
+EXPERIMENT_NAME = "moodify-pipeline"
+INDEX_PATH = "models/annoy_index.ann"
+FROZEN_FEATURES_PATH = "scripts/eval_mood_features.json"
 
-  EXPERIMENT_NAME = "moodify-pipeline"
-  INDEX_PATH = "models/annoy_index.ann"
 
-  RUN_NAME = "boost-w0.5"
-  POPULARITY_WEIGHT = 0.5
-  POPULARITY_TARGET = "N/A"
-  RANKER = partial(ranker_b, popularity_weight=POPULARITY_WEIGHT)
-  
+def run(config: RunConfig) -> None:
+  ''' Evaluates one configuration and logs it as a single MLflow run '''
+  frozen_features = load_frozen_features(FROZEN_FEATURES_PATH)
+  ranker = build_ranker(config)
 
   mlflow.set_experiment(EXPERIMENT_NAME)
   index_hash = file_hash(INDEX_PATH)
   index_is_new = not index_already_logged(EXPERIMENT_NAME, index_hash)
 
-  with mlflow.start_run(run_name=RUN_NAME):
-    mlflow.log_param("n_trees", 50)
-    mlflow.log_param("popularity_target", POPULARITY_TARGET)
-    mlflow.log_param("candidate_pool_size", 500)
+  with mlflow.start_run(run_name=config.run_name):
+    mlflow.log_params(config_params(config))
     mlflow.log_param("index_hash", index_hash)
-    mlflow.log_param("ranker", "B")
-    mlflow.log_param("popularity_weight", POPULARITY_WEIGHT)
 
     mlflow.log_artifact("models/scaler.pkl")
     mlflow.log_artifact("scripts/eval_queries.py")
-    mlflow.log_artifact("scripts/eval_mood_features.json")
+    mlflow.log_artifact(FROZEN_FEATURES_PATH)
     if index_is_new:
       mlflow.log_artifact(INDEX_PATH)
 
-    
-    mood_eval_metrics = evaluate_mood_queries(MOOD_QUERIES, RANKER, frozen_features=frozen_features)
-    track_eval_metrics = evaluate_track_queries(TRACK_QUERIES, RANKER)
+    mood = evaluate_mood_queries(
+      MOOD_QUERIES, ranker, frozen_features, config.popularity_target, config.candidate_pool_size
+    )
+    track = evaluate_track_queries(TRACK_QUERIES, ranker, config.candidate_pool_size)
 
-    mlflow.log_metric("mood_avg_similarity", mood_eval_metrics.average_similarity)
-    mlflow.log_metric("mood_avg_latency", mood_eval_metrics.average_latency)
-    mlflow.log_metric("mood_avg_popularity", mood_eval_metrics.average_popularity)
+    mlflow.log_metrics({
+      "mood_avg_similarity": mood.average_similarity,
+      "mood_avg_latency": mood.average_latency,
+      "mood_avg_popularity": mood.average_popularity,
+      "track_avg_similarity": track.average_similarity,
+      "track_avg_latency": track.average_latency,
+      "track_avg_popularity": track.average_popularity,
+    })
 
-    mlflow.log_metric("track_avg_similarity", track_eval_metrics.average_similarity)
-    mlflow.log_metric("track_avg_latency", track_eval_metrics.average_latency)
-    mlflow.log_metric("track_avg_popularity", track_eval_metrics.average_popularity)
 
-    
+if __name__ == "__main__":
+  parser = argparse.ArgumentParser(description="Run one named evaluation config and log it to MLflow")
+  parser.add_argument("run_name", choices=sorted(RUNS), help="a config name defined in scripts/run_config.py")
+  run(RUNS[parser.parse_args().run_name])
 
 
   
