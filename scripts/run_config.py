@@ -50,7 +50,9 @@ _RUN_LIST: list[RunConfig] = [
   RunConfig("boost-w0.1", "B", popularity_weight=0.1),
   RunConfig("boost-w0.2", "B", popularity_weight=0.2),
   RunConfig("boost-w0.5", "B", popularity_weight=0.5),
+  RunConfig("boost-w0.2-pool1000", "B", popularity_weight=0.2, candidate_pool_size=1000),
   RunConfig("boost-w0.2-pool2000", "B", popularity_weight=0.2, candidate_pool_size=2000),
+  RunConfig("boost-w0.2-pool5000", "B", popularity_weight=0.2, candidate_pool_size=5000),
 ]
 
 RUNS: dict[str, RunConfig] = {config.run_name: config for config in _RUN_LIST}
